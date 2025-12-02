@@ -3,251 +3,332 @@ import pandas as pd
 import ast
 import requests
 import os
+import pickle
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 # =========================================================
 # ⚙️ 1. CONFIGURATION
 # =========================================================
-TMDB_API_KEY = '1d3e98627e79321f7093a1b46fe360d7'
+TMDB_API_KEY = "1d3e98627e79321f7093a1b46fe360d7"
+DATA_DIR = "data"
+MOVIES_PICKLE = "movies.pkl"
+SIMILARITY_PICKLE = "similarity.pkl"
 
 st.set_page_config(
     page_title="CineMatch Pro", 
-    page_icon="🎬", 
+    page_icon="🍿", 
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # =========================================================
-# 🎨 2. PROFESSIONAL UI STYLING (CSS)
+# 🎨 2. PROFESSIONAL CSS (HERO & SIDEBAR)
 # =========================================================
 st.markdown("""
 <style>
-    /* MAIN BACKGROUND */
+    /* 1. APP BACKGROUND */
     .stApp {
-        background-color: #000000;
-        background-image: linear-gradient(to bottom, rgba(0,0,0,0.8), #141414), 
-                          url('https://assets.nflxext.com/ffe/siteui/vlv3/f841d4c7-10e1-40af-bcae-07a3f8dc141a/f6d7434e-d6de-4185-a6d4-c77a2d08648f/US-en-20220502-popsignuptwoweeks-perspective_alpha_website_medium.jpg');
-        background-size: cover;
-        background-attachment: fixed;
-        color: #ffffff;
+        background-color: #0f0f0f;
+        color: #e0e0e0;
+        font-family: 'Inter', sans-serif;
     }
 
-    /* TYPOGRAPHY */
-    h1 {
-        font-family: 'Helvetica Neue', sans-serif;
-        font-weight: 800;
-        color: #E50914; /* Netflix Red */
-        text-shadow: 2px 2px 4px #000000;
-        font-size: 3rem !important;
-        text-align: center;
-        padding-bottom: 20px;
-    }
-    h3 {
-        color: #e5e5e5;
-        font-weight: 300;
-    }
-
-    /* SIDEBAR STYLING */
+    /* 2. CUSTOM SIDEBAR */
     section[data-testid="stSidebar"] {
-        background-color: rgba(0, 0, 0, 0.9);
-        border-right: 1px solid #333;
+        background-color: #050505;
+        border-right: 1px solid #222;
     }
     
-    /* MOVIE CARDS (HOVER EFFECT) */
+    /* Hide default radio buttons circle */
+    div[role="radiogroup"] > label > div:first-of-type {
+        display: none;
+    }
+    /* Style the radio labels to look like menu items */
+    div[role="radiogroup"] label {
+        padding: 12px 20px;
+        border-radius: 8px;
+        margin-bottom: 5px;
+        border: 1px solid transparent;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        font-weight: 500;
+    }
+    /* Hover state for menu items */
+    div[role="radiogroup"] label:hover {
+        background-color: #1a1a1a;
+        color: #E50914;
+        border-color: #333;
+    }
+    /* Active state is handled by Streamlit internally, but we can style the text */
+    div[role="radiogroup"] label[data-testid="stMarkdownContainer"] p {
+        font-size: 16px;
+    }
+
+    /* 3. HERO SECTION TYPOGRAPHY */
+    .hero-title {
+        font-size: 3.5rem;
+        font-weight: 900;
+        line-height: 1.1;
+        background: linear-gradient(90deg, #ffffff, #aaaaaa);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 10px;
+    }
+    .hero-tagline {
+        color: #E50914;
+        font-size: 1.2rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        margin-bottom: 15px;
+    }
+    .hero-overview {
+        color: #ccc;
+        font-size: 1.1rem;
+        line-height: 1.6;
+        margin-bottom: 25px;
+    }
+
+    /* 4. MOVIE CARDS (Grid) */
     div[data-testid="stImage"] img {
-        border-radius: 10px;
-        transition: transform 0.3s ease;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+        border-radius: 12px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }
     div[data-testid="stImage"] img:hover {
         transform: scale(1.05);
+        box-shadow: 0 12px 30px rgba(229, 9, 20, 0.4);
         cursor: pointer;
-        border: 2px solid #E50914;
     }
 
-    /* BUTTON STYLING */
-    .stButton>button {
-        background-color: #E50914;
+    /* 5. BUTTONS */
+    div.stButton > button {
+        background: #E50914;
         color: white;
-        font-weight: bold;
-        border-radius: 5px;
         border: none;
-        padding: 10px 20px;
-        width: 100%;
-        transition: background 0.3s;
-    }
-    .stButton>button:hover {
-        background-color: #b20710;
-        color: #ffffff;
-    }
-
-    /* RATING BADGE */
-    .rating-badge {
-        background-color: #f5c518;
-        color: black;
-        padding: 3px 8px;
-        border-radius: 4px;
+        border-radius: 6px;
         font-weight: bold;
-        font-size: 12px;
+        padding: 0.5rem 1.5rem;
+    }
+    div.stButton > button:hover {
+        background: #b20710;
+        box-shadow: 0 0 10px rgba(229, 9, 20, 0.5);
     }
     
-    /* LINK BUTTON (TRAILER) */
-    a {
-        text-decoration: none !important;
+    /* 6. FOOTER */
+    .footer {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        background-color: #000;
+        color: #555;
+        text-align: center;
+        padding: 8px;
+        font-size: 11px;
+        border-top: 1px solid #222;
+        z-index: 999;
     }
+    
+    /* Hide Default Header/Footer */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
 # =========================================================
-# 🧠 3. SMART DATA ENGINE
+# 🧠 3. DATA ENGINE
 # =========================================================
 @st.cache_resource
-def load_and_process_data():
-    if not os.path.exists('similarity.pkl'):
-        # Generate data if missing (Cloud Deployment Safe)
-        movies = pd.read_csv('data/tmdb_5000_movies.csv')
-        credits = pd.read_csv('data/tmdb_5000_credits.csv')
-        movies = movies.merge(credits, on='title')
-        movies = movies[['movie_id', 'title', 'overview', 'genres', 'keywords', 'cast', 'crew']]
-        movies.dropna(inplace=True)
+def load_data():
+    # Load pickles if available
+    if os.path.exists(MOVIES_PICKLE) and os.path.exists(SIMILARITY_PICKLE):
+        try:
+            return pickle.load(open(MOVIES_PICKLE, "rb")), pickle.load(open(SIMILARITY_PICKLE, "rb"))
+        except: pass
 
-        def convert(obj): return [i['name'] for i in ast.literal_eval(obj)]
-        def convert3(obj): return [i['name'] for i in ast.literal_eval(obj)][:3]
-        def fetch_director(obj): return [i['name'] for i in ast.literal_eval(obj) if i['job'] == 'Director']
+    # Fallback: Load from CSV and process
+    if not os.path.exists(os.path.join(DATA_DIR, "tmdb_5000_movies.csv")): return pd.DataFrame(), None
 
-        for col in ['genres', 'keywords']: movies[col] = movies[col].apply(convert)
-        movies['cast'] = movies['cast'].apply(convert3)
-        movies['crew'] = movies['crew'].apply(fetch_director)
-        movies['overview'] = movies['overview'].apply(lambda x: x.split())
+    movies = pd.read_csv(os.path.join(DATA_DIR, "tmdb_5000_movies.csv"))
+    credits = pd.read_csv(os.path.join(DATA_DIR, "tmdb_5000_credits.csv"))
+    movies = movies.merge(credits, on='title', how='left')
+    
+    # Simple preprocessing
+    movies['tags'] = movies['overview'].fillna('') + " " + movies['genres'].fillna('')
+    movies['tags'] = movies['tags'].apply(lambda x: x.lower())
+    
+    new_df = movies[['movie_id', 'title', 'tags']].copy()
+    
+    cv = CountVectorizer(max_features=5000, stop_words='english')
+    vectors = cv.fit_transform(new_df['tags']).toarray()
+    similarity = cosine_similarity(vectors)
 
-        for col in ['genres', 'keywords', 'cast', 'crew']:
-            movies[col] = movies[col].apply(lambda x: [i.replace(" ", "") for i in x])
+    return new_df, similarity
 
-        movies['tags'] = movies['overview'] + movies['genres'] + movies['keywords'] + movies['cast'] + movies['crew']
-        new_df = movies[['movie_id', 'title', 'tags']].copy()
-        new_df['tags'] = new_df['tags'].apply(lambda x: " ".join(x).lower())
-
-        cv = CountVectorizer(max_features=5000, stop_words='english')
-        vectors = cv.fit_transform(new_df['tags']).toarray()
-        similarity = cosine_similarity(vectors)
-        return new_df, similarity
-    else:
-        new_df = pickle.load(open('movies.pkl', 'rb'))
-        similarity = pickle.load(open('similarity.pkl', 'rb'))
-        return new_df, similarity
-
-movies, similarity = load_and_process_data()
+movies_df, similarity = load_data()
+title_to_index = {title: idx for idx, title in enumerate(movies_df['title'].values)} if not movies_df.empty else {}
 
 # =========================================================
 # 🌐 4. API FUNCTIONS
 # =========================================================
+TMDB_IMG = "https://image.tmdb.org/t/p/w500"
+TMDB_BACKDROP = "https://image.tmdb.org/t/p/original"
+
+def tmdb_get(path, params=None):
+    if params is None: params = {}
+    params['api_key'] = TMDB_API_KEY
+    try:
+        r = requests.get(f"https://api.themoviedb.org/3{path}", params=params, timeout=5)
+        return r.json() if r.status_code == 200 else {}
+    except: return {}
+
 def fetch_details(movie_id):
-    try:
-        # Get Details
-        url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_API_KEY}&language=en-US"
-        data = requests.get(url).json()
-        poster = "https://image.tmdb.org/t/p/w500/" + data.get('poster_path', '') if data.get('poster_path') else "https://via.placeholder.com/500x750"
-        rating = data.get('vote_average', 0)
-        overview = data.get('overview', "No overview available.")
-        
-        # Get Trailer
-        video_url = f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={TMDB_API_KEY}&language=en-US"
-        video_data = requests.get(video_url).json()
-        trailer = "None"
-        if 'results' in video_data:
-            for video in video_data['results']:
-                if video['site'] == "YouTube" and video['type'] == "Trailer":
-                    trailer = f"https://www.youtube.com/watch?v={video['key']}"
-                    break
-        
-        return poster, rating, trailer, overview
-    except:
-        return "https://via.placeholder.com/500x750", 0, "None", ""
+    d = tmdb_get(f"/movie/{movie_id}", {"append_to_response": "videos,credits"})
+    if not d: return {}
+    
+    trailer = next((f"https://youtube.com/watch?v={v['key']}" for v in d.get('videos', {}).get('results', []) if v['type'] == "Trailer"), None)
+    
+    return {
+        "title": d.get('title'),
+        "poster": TMDB_IMG + d.get('poster_path') if d.get('poster_path') else None,
+        "backdrop": TMDB_BACKDROP + d.get('backdrop_path') if d.get('backdrop_path') else None,
+        "overview": d.get('overview', ''),
+        "rating": d.get('vote_average', 0),
+        "year": d.get('release_date', 'N/A')[:4],
+        "genres": [g['name'] for g in d.get('genres', [])][:3],
+        "trailer": trailer,
+        "id": d.get('id')
+    }
 
-def recommend(movie):
-    try:
-        movie_index = movies[movies['title'] == movie].index[0]
-        distances = similarity[movie_index]
-        movies_list = sorted(list(enumerate(distances)), reverse=True, key=lambda x: x[1])[1:6]
-        
-        results = []
-        for i in movies_list:
-            movie_id = movies.iloc[i[0]].movie_id
-            title = movies.iloc[i[0]].title
-            poster, rating, trailer, overview = fetch_details(movie_id)
-            results.append((title, poster, rating, trailer, overview))
-        return results
-    except:
-        return []
+def fetch_trending():
+    res = tmdb_get("/trending/movie/week")
+    return res.get("results", [])
+
+def recommend(title):
+    if title not in title_to_index or similarity is None: return []
+    idx = title_to_index[title]
+    scores = sorted(list(enumerate(similarity[idx])), key=lambda x: x[1], reverse=True)[1:11]
+    return [fetch_details(movies_df.iloc[i].movie_id) for i, _ in scores]
 
 # =========================================================
-# 🎬 5. APP LAYOUT
+# 🚀 5. APP LAYOUT
 # =========================================================
 
-# --- Header ---
-st.title("CineMatch Pro")
-st.markdown("<p style='text-align: center; color: #b3b3b3;'>AI-Powered Recommendations based on Content Similarity</p>", unsafe_allow_html=True)
-st.markdown("---")
-
-# --- Sidebar ---
+# --- CUSTOM SIDEBAR ---
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/2503/2503508.png", width=50)
-    st.header("Search Parameters")
+    # Logo Area
+    st.markdown("""
+    <div style="text-align: center; padding: 20px 0;">
+        <h1 style="color:#E50914; margin:0; font-size: 28px;">CINEMATCH</h1>
+        <p style="color:#666; font-size: 12px; margin-top:5px;">AI POWERED DISCOVERY</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    selected_movie = st.selectbox(
-        "Select a movie you enjoyed:",
-        movies['title'].values
-    )
-    
-    if st.button('🚀 Find Recommendations'):
-        search_clicked = True
-    else:
-        search_clicked = False
+    # Navigation Menu (Radio button styled as Menu)
+    page = st.radio("MENU", ["🔥 Trending", "🎯 Recommendations", "⭐ Favorites"], label_visibility="collapsed")
     
     st.markdown("---")
-    st.markdown("© 2025 CineMatch AI")
+    st.caption("Data provided by TMDB")
 
-# --- Main Content ---
-if search_clicked:
-    with st.spinner('Analyzing plot, genres, and cast...'):
-        recommendations = recommend(selected_movie)
+# --- PAGE: TRENDING (HERO SECTION) ---
+if page == "🔥 Trending":
+    trending = fetch_trending()
     
-    if recommendations:
-        st.subheader(f"Because you watched: {selected_movie}")
-        st.markdown("") # Spacing
+    if trending:
+        top_movie = trending[0]
+        hero = fetch_details(top_movie['id'])
         
-        # Grid Layout
-        cols = st.columns(5)
-        
-        for idx, col in enumerate(cols):
-            title, poster, rating, trailer, overview = recommendations[idx]
+        # --- HERO SECTION START ---
+        # We use columns to create a "Split" Hero: Text on Left, Big Image on Right
+        hero_container = st.container()
+        with hero_container:
+            col1, col2 = st.columns([1, 1.5], gap="large")
             
-            with col:
-                # Poster Image
-                st.image(poster, use_container_width=True)
+            with col1:
+                st.markdown('<div style="height: 20px;"></div>', unsafe_allow_html=True) # Spacer
+                st.markdown('<p class="hero-tagline">#1 Trending Movie</p>', unsafe_allow_html=True)
+                st.markdown(f'<h1 class="hero-title">{hero["title"]}</h1>', unsafe_allow_html=True)
                 
-                # Title
-                st.markdown(f"**{title}**")
+                # Metadata tags
+                st.markdown(f"**{hero['year']}** • ⭐ **{round(hero['rating'], 1)}** • _{', '.join(hero['genres'])}_")
                 
-                # Rating Badge
-                st.markdown(f"<span class='rating-badge'>⭐ {round(rating, 1)}</span>", unsafe_allow_html=True)
+                st.markdown(f'<p class="hero-overview">{hero["overview"][:200]}...</p>', unsafe_allow_html=True)
                 
-                # Expander for Plot
-                with st.expander("📝 Plot"):
-                    st.caption(overview[:150] + "...")
-                
-                # Trailer Button
-                if trailer != "None":
-                    st.link_button("▶ Watch Trailer", trailer)
-                else:
-                    st.button("No Trailer", disabled=True, key=f"btn_{idx}")
-    else:
-        st.error("Movie not found in database! Try another one.")
+                # Buttons Row
+                b1, b2 = st.columns([1, 2])
+                with b1:
+                    if hero['trailer']:
+                        st.link_button("▶ Play Trailer", hero['trailer'])
+                    else:
+                        st.button("No Trailer", disabled=True)
+                with b2:
+                    if st.button("More Info"):
+                        st.session_state.selected_movie = hero['title']
+                        st.toast(f"Selected {hero['title']}")
 
-else:
-    # Empty State / Landing Page feel
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    c1, c2, c3 = st.columns([1,2,1])
-    with c2:
-        st.info("👈 Please select a movie from the sidebar to start your discovery journey.")
+            with col2:
+                # The Backdrop Image with Shadow
+                if hero['backdrop']:
+                    st.image(hero['backdrop'], use_container_width=True)
+        # --- HERO SECTION END ---
+
+        st.markdown("---")
+        
+        # Grid Section for other trending
+        st.subheader("Top Picks This Week")
+        for i in range(1, 11, 5): # Skip #1
+            cols = st.columns(5)
+            for j in range(5):
+                if i + j < len(trending):
+                    m = trending[i + j]
+                    with cols[j]:
+                        poster = TMDB_IMG + m.get('poster_path', '')
+                        st.image(poster, use_container_width=True)
+                        st.write(f"**{m['title']}**")
+                        st.caption(f"⭐ {round(m['vote_average'], 1)}")
+
+# --- PAGE: RECOMMENDATIONS ---
+elif page == "🎯 Recommendations":
+    st.title("Find Your Next Obsession")
+    
+    # Search Bar Container
+    with st.container():
+        c1, c2 = st.columns([3, 1])
+        with c1:
+            options = movies_df['title'].values if not movies_df.empty else []
+            selected = st.selectbox("I enjoyed watching...", options)
+        with c2:
+            st.markdown('<div style="height: 28px;"></div>', unsafe_allow_html=True) # Align button
+            if st.button("Get Recommendations", type="primary", use_container_width=True):
+                st.session_state.trigger_rec = True
+
+    if st.session_state.get("trigger_rec"):
+        recs = recommend(selected)
+        if recs:
+            st.subheader(f"Because you watched '{selected}':")
+            st.markdown("")
+            
+            # Responsive Grid
+            for i in range(0, len(recs), 5):
+                cols = st.columns(5)
+                for j in range(5):
+                    if i + j < len(recs):
+                        m = recs[i + j]
+                        with cols[j]:
+                            st.image(m['poster'], use_container_width=True)
+                            st.markdown(f"**{m['title']}**")
+                            st.caption(f"{m['year']} • ⭐ {round(m['rating'], 1)}")
+                            if m['trailer']:
+                                st.link_button("Trailer", m['trailer'])
+        else:
+            st.warning("No matches found in database.")
+
+# --- PAGE: FAVORITES (Placeholder) ---
+elif page == "⭐ Favorites":
+    st.title("My List")
+    st.info("This feature is coming in the next update! (Requires Database)")
+
+# --- FOOTER ---
+st.markdown('<div class="footer">Designed by <b>Usman</b> • Powered by TMDB API</div>', unsafe_allow_html=True)

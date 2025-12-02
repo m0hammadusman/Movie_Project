@@ -1,0 +1,14 @@
+{
+  "profiles": {
+    "default": {
+      "watchlist": [],
+      "ratings": {},
+      "prefs": {
+        "genres": [],
+        "actors": []
+      },
+      "history": []
+    }
+  },
+  "active_profile": "default"
+}
