@@ -2,40 +2,110 @@ import streamlit as st
 import pandas as pd
 import ast
 import requests
-import pickle
 import os
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 # =========================================================
-# ⚙️ CONFIGURATION
+# ⚙️ 1. CONFIGURATION
 # =========================================================
 TMDB_API_KEY = '1d3e98627e79321f7093a1b46fe360d7'
-st.set_page_config(page_title="CineMatch AI", page_icon="🍿", layout="wide")
+
+st.set_page_config(
+    page_title="CineMatch Pro", 
+    page_icon="🎬", 
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 # =========================================================
-# 🎨 CUSTOM STYLING
+# 🎨 2. PROFESSIONAL UI STYLING (CSS)
 # =========================================================
 st.markdown("""
 <style>
-    .stApp { background-color: #141414; color: #ffffff; }
-    h1 { color: #E50914; font-family: 'Arial Black', sans-serif; text-align: center; }
-    .movie-title { font-size: 16px; font-weight: bold; margin-bottom: 5px; }
-    .rating { color: #f5c518; font-weight: bold; font-size: 14px; }
-    .stButton>button { background-color: #333; color: white; border: 1px solid #555; }
-    .stButton>button:hover { border-color: #E50914; color: #E50914; }
+    /* MAIN BACKGROUND */
+    .stApp {
+        background-color: #000000;
+        background-image: linear-gradient(to bottom, rgba(0,0,0,0.8), #141414), 
+                          url('https://assets.nflxext.com/ffe/siteui/vlv3/f841d4c7-10e1-40af-bcae-07a3f8dc141a/f6d7434e-d6de-4185-a6d4-c77a2d08648f/US-en-20220502-popsignuptwoweeks-perspective_alpha_website_medium.jpg');
+        background-size: cover;
+        background-attachment: fixed;
+        color: #ffffff;
+    }
+
+    /* TYPOGRAPHY */
+    h1 {
+        font-family: 'Helvetica Neue', sans-serif;
+        font-weight: 800;
+        color: #E50914; /* Netflix Red */
+        text-shadow: 2px 2px 4px #000000;
+        font-size: 3rem !important;
+        text-align: center;
+        padding-bottom: 20px;
+    }
+    h3 {
+        color: #e5e5e5;
+        font-weight: 300;
+    }
+
+    /* SIDEBAR STYLING */
+    section[data-testid="stSidebar"] {
+        background-color: rgba(0, 0, 0, 0.9);
+        border-right: 1px solid #333;
+    }
+    
+    /* MOVIE CARDS (HOVER EFFECT) */
+    div[data-testid="stImage"] img {
+        border-radius: 10px;
+        transition: transform 0.3s ease;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+    }
+    div[data-testid="stImage"] img:hover {
+        transform: scale(1.05);
+        cursor: pointer;
+        border: 2px solid #E50914;
+    }
+
+    /* BUTTON STYLING */
+    .stButton>button {
+        background-color: #E50914;
+        color: white;
+        font-weight: bold;
+        border-radius: 5px;
+        border: none;
+        padding: 10px 20px;
+        width: 100%;
+        transition: background 0.3s;
+    }
+    .stButton>button:hover {
+        background-color: #b20710;
+        color: #ffffff;
+    }
+
+    /* RATING BADGE */
+    .rating-badge {
+        background-color: #f5c518;
+        color: black;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-weight: bold;
+        font-size: 12px;
+    }
+    
+    /* LINK BUTTON (TRAILER) */
+    a {
+        text-decoration: none !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # =========================================================
-# 🧠 SMART DATA LOADING (Cloud Compatible)
+# 🧠 3. SMART DATA ENGINE
 # =========================================================
 @st.cache_resource
 def load_and_process_data():
-    # If we are on the cloud, the pkl files might not exist. 
-    # We generate them on the fly.
     if not os.path.exists('similarity.pkl'):
-        
+        # Generate data if missing (Cloud Deployment Safe)
         movies = pd.read_csv('data/tmdb_5000_movies.csv')
         credits = pd.read_csv('data/tmdb_5000_credits.csv')
         movies = movies.merge(credits, on='title')
@@ -46,8 +116,7 @@ def load_and_process_data():
         def convert3(obj): return [i['name'] for i in ast.literal_eval(obj)][:3]
         def fetch_director(obj): return [i['name'] for i in ast.literal_eval(obj) if i['job'] == 'Director']
 
-        movies['genres'] = movies['genres'].apply(convert)
-        movies['keywords'] = movies['keywords'].apply(convert)
+        for col in ['genres', 'keywords']: movies[col] = movies[col].apply(convert)
         movies['cast'] = movies['cast'].apply(convert3)
         movies['crew'] = movies['crew'].apply(fetch_director)
         movies['overview'] = movies['overview'].apply(lambda x: x.split())
@@ -64,7 +133,6 @@ def load_and_process_data():
         similarity = cosine_similarity(vectors)
         return new_df, similarity
     else:
-        # Load from local files if they exist (Faster for local dev)
         new_df = pickle.load(open('movies.pkl', 'rb'))
         similarity = pickle.load(open('similarity.pkl', 'rb'))
         return new_df, similarity
@@ -72,30 +140,30 @@ def load_and_process_data():
 movies, similarity = load_and_process_data()
 
 # =========================================================
-# 🌐 API FUNCTIONS (Trailers & Posters)
+# 🌐 4. API FUNCTIONS
 # =========================================================
 def fetch_details(movie_id):
     try:
-        # 1. Get Details (Poster + Rating)
+        # Get Details
         url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_API_KEY}&language=en-US"
         data = requests.get(url).json()
-        poster = "https://image.tmdb.org/t/p/w500/" + data.get('poster_path', '')
+        poster = "https://image.tmdb.org/t/p/w500/" + data.get('poster_path', '') if data.get('poster_path') else "https://via.placeholder.com/500x750"
         rating = data.get('vote_average', 0)
+        overview = data.get('overview', "No overview available.")
         
-        # 2. Get Trailer
+        # Get Trailer
         video_url = f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={TMDB_API_KEY}&language=en-US"
         video_data = requests.get(video_url).json()
         trailer = "None"
-        
         if 'results' in video_data:
             for video in video_data['results']:
                 if video['site'] == "YouTube" and video['type'] == "Trailer":
                     trailer = f"https://www.youtube.com/watch?v={video['key']}"
                     break
-                    
-        return poster, rating, trailer
+        
+        return poster, rating, trailer, overview
     except:
-        return "https://via.placeholder.com/500x750", 0, "None"
+        return "https://via.placeholder.com/500x750", 0, "None", ""
 
 def recommend(movie):
     try:
@@ -107,38 +175,79 @@ def recommend(movie):
         for i in movies_list:
             movie_id = movies.iloc[i[0]].movie_id
             title = movies.iloc[i[0]].title
-            poster, rating, trailer = fetch_details(movie_id)
-            results.append((title, poster, rating, trailer))
+            poster, rating, trailer, overview = fetch_details(movie_id)
+            results.append((title, poster, rating, trailer, overview))
         return results
     except:
         return []
 
 # =========================================================
-# 🖥️ UI INTERFACE
+# 🎬 5. APP LAYOUT
 # =========================================================
-st.title("🍿 CineMatch AI")
 
-# Sidebar
-st.sidebar.markdown("### 🔎 Search")
-selected_movie = st.sidebar.selectbox("Pick a movie you love:", movies['title'].values)
-search_clicked = st.sidebar.button("Recommend Movies", type="primary")
+# --- Header ---
+st.title("CineMatch Pro")
+st.markdown("<p style='text-align: center; color: #b3b3b3;'>AI-Powered Recommendations based on Content Similarity</p>", unsafe_allow_html=True)
+st.markdown("---")
 
-if search_clicked:
-    st.subheader(f"Because you watched '{selected_movie}':")
-    recommendations = recommend(selected_movie)
+# --- Sidebar ---
+with st.sidebar:
+    st.image("https://cdn-icons-png.flaticon.com/512/2503/2503508.png", width=50)
+    st.header("Search Parameters")
     
-    cols = st.columns(5)
-    for idx, col in enumerate(cols):
-        title, poster, rating, trailer = recommendations[idx]
+    selected_movie = st.selectbox(
+        "Select a movie you enjoyed:",
+        movies['title'].values
+    )
+    
+    if st.button('🚀 Find Recommendations'):
+        search_clicked = True
+    else:
+        search_clicked = False
+    
+    st.markdown("---")
+    st.markdown("© 2025 CineMatch AI")
+
+# --- Main Content ---
+if search_clicked:
+    with st.spinner('Analyzing plot, genres, and cast...'):
+        recommendations = recommend(selected_movie)
+    
+    if recommendations:
+        st.subheader(f"Because you watched: {selected_movie}")
+        st.markdown("") # Spacing
         
-        with col:
-            st.image(poster, use_container_width=True)
-            st.markdown(f"<div class='movie-title'>{title}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='rating'>⭐ {round(rating, 1)}/10</div>", unsafe_allow_html=True)
+        # Grid Layout
+        cols = st.columns(5)
+        
+        for idx, col in enumerate(cols):
+            title, poster, rating, trailer, overview = recommendations[idx]
             
-            if trailer != "None":
-                st.link_button("▶ Trailer", trailer)
-            else:
-                st.button("No Trailer", disabled=True, key=idx)
+            with col:
+                # Poster Image
+                st.image(poster, use_container_width=True)
+                
+                # Title
+                st.markdown(f"**{title}**")
+                
+                # Rating Badge
+                st.markdown(f"<span class='rating-badge'>⭐ {round(rating, 1)}</span>", unsafe_allow_html=True)
+                
+                # Expander for Plot
+                with st.expander("📝 Plot"):
+                    st.caption(overview[:150] + "...")
+                
+                # Trailer Button
+                if trailer != "None":
+                    st.link_button("▶ Watch Trailer", trailer)
+                else:
+                    st.button("No Trailer", disabled=True, key=f"btn_{idx}")
+    else:
+        st.error("Movie not found in database! Try another one.")
+
 else:
-    st.info("👈 Select a movie from the sidebar to get started!")
+    # Empty State / Landing Page feel
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    c1, c2, c3 = st.columns([1,2,1])
+    with c2:
+        st.info("👈 Please select a movie from the sidebar to start your discovery journey.")
