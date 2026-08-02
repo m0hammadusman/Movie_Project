@@ -74,8 +74,9 @@ def toggle_watchlist(movie_dict):
     save_user_data(data)
     return added
 
+
 # =========================================================
-# ⚙️ 1. CONFIGURATION
+# ⚙️ CONFIGURATION
 # =========================================================
 TMDB_API_KEY = os.getenv("TMDB_API_KEY", "1d3e98627e79321f7093a1b46fe360d7")
 DATA_DIR = "data"
@@ -90,28 +91,37 @@ st.set_page_config(
 )
 
 # =========================================================
-# 🎨 2. CINEMATCH TV INTERFACE CSS (REFERENCE UI MATCH)
+# 🎨 1:1 PIXEL MATCHING REFERENCE TV UI CSS
 # =========================================================
 st.markdown("""
 <style>
-    /* Global App Background */
-    .stApp {
-        background-color: #0c0e14;
-        color: #f1f5f9;
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&display=swap');
+
+    /* Global Dark Theme */
+    html, body, .stApp {
+        background-color: #0b0d12 !important;
+        color: #e2e8f0;
         font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    /* Remove default Streamlit top padding */
+    .block-container {
+        padding-top: 1.2rem !important;
+        padding-bottom: 2rem !important;
+        max-width: 1400px;
     }
 
     /* Scrollbars */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #0c0e14; }
-    ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+    ::-webkit-scrollbar-track { background: #0b0d12; }
+    ::-webkit-scrollbar-thumb { background: #1f2430; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #E50914; }
 
-    /* Sidebar Styling */
+    /* Left Sidebar Styling */
     section[data-testid="stSidebar"] {
-        background-color: #07080b !important;
-        border-right: 1px solid #18181b !important;
-        padding-top: 1rem;
+        background-color: #06070a !important;
+        border-right: 1px solid #161a23 !important;
+        padding-top: 1.2rem;
     }
 
     /* Hide default radio buttons circle */
@@ -119,21 +129,41 @@ st.markdown("""
         display: none;
     }
     div[role="radiogroup"] label {
-        padding: 12px 18px;
-        border-radius: 10px;
-        margin-bottom: 6px;
+        padding: 11px 16px;
+        border-radius: 8px;
+        margin-bottom: 4px;
         border: 1px solid transparent;
         transition: all 0.2s ease;
         cursor: pointer;
         font-weight: 600;
-        color: #94a3b8;
+        color: #8e95a5;
+        font-size: 15px;
     }
     div[role="radiogroup"] label:hover {
-        background-color: #18181b;
+        background-color: #151821;
         color: #ffffff;
     }
 
-    /* Hero Section Styling */
+    /* Active Radio Item Styling */
+    div[role="radiogroup"] label[data-checked="true"] {
+        background: linear-gradient(90deg, #b91c1c 0%, #991b1b 100%) !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        box-shadow: 0 4px 12px rgba(185, 28, 28, 0.4);
+    }
+
+    /* Top Search Bar & Header */
+    .top-search-wrapper {
+        background-color: #141721;
+        border: 1px solid #232836;
+        border-radius: 10px;
+        padding: 6px 14px;
+        display: flex;
+        align-items: center;
+        width: 100%;
+    }
+
+    /* Hero Component Styling */
     .hero-badge-tag {
         display: inline-block;
         background-color: rgba(255, 255, 255, 0.12);
@@ -141,7 +171,7 @@ st.markdown("""
         font-size: 11px;
         font-weight: 800;
         padding: 5px 12px;
-        border-radius: 6px;
+        border-radius: 4px;
         letter-spacing: 1.5px;
         text-transform: uppercase;
         margin-bottom: 12px;
@@ -175,7 +205,7 @@ st.markdown("""
         max-width: 650px;
     }
 
-    /* Primary & Outline Buttons */
+    /* Buttons */
     div.stButton > button {
         background-color: #E50914;
         color: #ffffff;
@@ -191,9 +221,9 @@ st.markdown("""
         transform: translateY(-2px);
     }
 
-    /* Section Header */
-    .section-title {
-        font-size: 1.1rem;
+    /* Section Subheaders */
+    .section-title-text {
+        font-size: 1.05rem;
         font-weight: 900;
         letter-spacing: 2px;
         text-transform: uppercase;
@@ -202,20 +232,20 @@ st.markdown("""
         margin-bottom: 1.2rem;
     }
 
-    /* Rating Tag Overlay */
+    /* Poster Card Ratings Overlay */
     .card-rating-tag {
-        background: rgba(0, 0, 0, 0.8);
+        background: rgba(0, 0, 0, 0.85);
         color: #f59e0b;
         font-weight: 800;
-        font-size: 12px;
-        padding: 2px 8px;
-        border-radius: 6px;
+        font-size: 11px;
+        padding: 2px 7px;
+        border-radius: 5px;
         border: 1px solid rgba(255, 255, 255, 0.15);
     }
 
-    /* Cards */
+    /* Card Image Hover */
     div[data-testid="stImage"] img {
-        border-radius: 12px;
+        border-radius: 10px;
         transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
     div[data-testid="stImage"] img:hover {
@@ -229,7 +259,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =========================================================
-# 🧠 3. DATA ENGINE
+# 🧠 DATA ENGINE
 # =========================================================
 @st.cache_resource
 def load_data():
@@ -259,7 +289,7 @@ movies_df, similarity = load_data()
 title_to_index = {title: idx for idx, title in enumerate(movies_df['title'].values)} if not movies_df.empty else {}
 
 # =========================================================
-# 🌐 4. API FUNCTIONS
+# 🌐 API FUNCTIONS
 # =========================================================
 TMDB_IMG = "https://image.tmdb.org/t/p/w500"
 TMDB_BACKDROP = "https://image.tmdb.org/t/p/original"
@@ -423,15 +453,15 @@ def recommend(title, filter_genres=None, min_rating=0.0, year_range=None, max_re
     return results
 
 # =========================================================
-# 🚀 5. APP LAYOUT
+# 🚀 5. APP LAYOUT (MATCHES REFERENCE IMAGE)
 # =========================================================
 
-# --- SIDEBAR NAVIGATION (MATCHES REFERENCE UI) ---
+# --- SIDEBAR NAVIGATION ---
 with st.sidebar:
     st.markdown("""
     <div style="padding: 10px 0 15px 0;">
         <h1 style="color:#E50914; margin:0; font-size: 26px; font-weight: 900; letter-spacing: 1px;">CINEMATCH</h1>
-        <p style="color:#71717a; font-size: 10px; letter-spacing: 2px; margin-top:2px; font-weight: 700;">AI-POWERED DISCOVERY</p>
+        <p style="color:#646c7c; font-size: 9px; letter-spacing: 2px; margin-top:2px; font-weight: 800; text-transform: uppercase;">AI-POWERED DISCOVERY</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -476,7 +506,7 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-# --- TOP SEARCH & PROFILE BAR (MATCHES REFERENCE UI) ---
+# --- TOP SEARCH & PROFILE BAR (MATCHES REFERENCE IMAGE) ---
 top_col1, top_col2 = st.columns([3.5, 1])
 
 with top_col1:
@@ -496,11 +526,11 @@ with top_col1:
 
 with top_col2:
     st.markdown("""
-    <div style="float: right; display: flex; align-items: center; gap: 10px; background: #13161f; border: 1px solid #27272a; padding: 6px 14px; border-radius: 10px;">
-        <span style="font-size: 18px;">👤</span>
+    <div class="profile-card-header">
+        <div class="profile-avatar-circle">A</div>
         <div>
-            <div style="font-weight: 700; font-size: 13px; color: #ffffff;">Alex Morgan</div>
-            <div style="font-size: 10px; color: #94a3b8;">Pro Member</div>
+            <div style="font-weight: 700; font-size: 13px; color: #ffffff;">Alex Morgan ⌵</div>
+            <div style="font-size: 10px; color: #8e95a5;">Pro Member</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -576,7 +606,7 @@ if page in ["🔥 Trending", "⏱️ Watch History"]:
                 elif hero.get('poster'):
                     st.image(hero['poster'], use_container_width=True)
 
-        st.markdown('<p class="section-title">AI RECOMMENDED FOR YOU</p>', unsafe_allow_html=True)
+        st.markdown('<p class="section-title-text">AI RECOMMENDED FOR YOU</p>', unsafe_allow_html=True)
         
         for i in range(1, 11, 5): # Skip #1
             cols = st.columns(5)
@@ -614,7 +644,7 @@ if page in ["🔥 Trending", "⏱️ Watch History"]:
 
 # --- PAGE: RECOMMENDATIONS ---
 elif page == "🔮 Recommendations":
-    st.markdown('<p class="section-title">FIND YOUR NEXT OBSESSION</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-title-text">FIND YOUR NEXT OBSESSION</p>', unsafe_allow_html=True)
     
     with st.container():
         c1, c2 = st.columns([3, 1])
@@ -642,7 +672,7 @@ elif page == "🔮 Recommendations":
             if f_years != (1950, 2026): filter_labels.append(f"Years: {f_years[0]}-{f_years[1]}")
             
             filter_suffix = f" • Filters Applied: [{', '.join(filter_labels)}]" if filter_labels else ""
-            st.markdown(f'<p class="section-title">BECAUSE YOU WATCHED \'{selected}\'{filter_suffix}:</p>', unsafe_allow_html=True)
+            st.markdown(f'<p class="section-title-text">BECAUSE YOU WATCHED \'{selected}\'{filter_suffix}:</p>', unsafe_allow_html=True)
             
             for i in range(0, len(recs), 5):
                 cols = st.columns(5)
@@ -674,7 +704,7 @@ elif page == "🔮 Recommendations":
 
 # --- PAGE: FAVORITES ---
 elif page == "🤍 Favorites":
-    st.markdown('<p class="section-title">⭐ MY WATCHLIST COLLECTION</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-title-text">⭐ MY WATCHLIST COLLECTION</p>', unsafe_allow_html=True)
     raw_watchlist = get_watchlist()
     
     f_genres = st.session_state.get("filter_genres", [])
@@ -718,4 +748,4 @@ elif page == "🤍 Favorites":
                                 st.toast(f"Removed '{m.get('title')}' from watchlist")
                                 st.rerun()
 
-st.markdown('<div class="footer-text">CINEMATCH • Data by TMDB • Designed by Usman</div>', unsafe_allow_html=True)
+st.markdown('<div style="text-align:center; padding:15px; color:#52525b; font-size:11px;">CINEMATCH • Data by TMDB • Designed by Usman</div>', unsafe_allow_html=True)
