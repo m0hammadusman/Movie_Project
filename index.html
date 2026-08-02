@@ -4,7 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CineMatch Pro — AI Movie Discovery</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <meta http-equiv="refresh" content="0; url=https://movie-recommender-9p6gkukrz6esesklqfenqg.streamlit.app/">
+    <script>
+        window.location.href = "https://movie-recommender-9p6gkukrz6esesklqfenqg.streamlit.app/";
+    </script>
     <style>
         * {
             margin: 0;
@@ -12,186 +15,59 @@
             box-sizing: border-box;
         }
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
             background: linear-gradient(135deg, #090a0f 0%, #12151e 50%, #08080c 100%);
             color: #e2e8f0;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-        }
-        .header {
-            padding: 2rem 5%;
-            display: flex;
-            justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(10px);
-        }
-        .logo {
-            font-size: 1.8rem;
-            font-weight: 900;
-            color: #E50914;
-            letter-spacing: -0.5px;
-        }
-        .badge {
-            background: rgba(229, 9, 20, 0.15);
-            color: #ff5252;
-            border: 1px solid rgba(229, 9, 20, 0.3);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-        .hero {
-            max-width: 1100px;
-            margin: 4rem auto;
-            padding: 0 2rem;
-            text-align: center;
-        }
-        .hero-tag {
-            color: #E50914;
-            font-weight: 800;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            font-size: 0.95rem;
-            margin-bottom: 1rem;
-        }
-        .hero h1 {
-            font-size: 3.5rem;
-            font-weight: 900;
-            line-height: 1.1;
-            margin-bottom: 1.5rem;
-            background: linear-gradient(90deg, #ffffff 0%, #cbd5e1 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .hero p {
-            font-size: 1.2rem;
-            color: #94a3b8;
-            max-width: 750px;
-            margin: 0 auto 2.5rem;
-            line-height: 1.7;
-        }
-        .btn-group {
-            display: flex;
-            gap: 1rem;
             justify-content: center;
-            flex-wrap: wrap;
+            text-align: center;
+            padding: 2rem;
         }
-        .btn {
+        .container {
+            max-width: 600px;
+            background: rgba(18, 18, 24, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 3rem 2rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+        }
+        h1 {
+            font-size: 2.2rem;
+            color: #E50914;
+            margin-bottom: 1rem;
+            font-weight: 900;
+        }
+        p {
+            color: #94a3b8;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        a.btn {
             display: inline-block;
-            padding: 1rem 2.2rem;
+            background: linear-gradient(135deg, #E50914 0%, #B81D24 100%);
+            color: white;
+            padding: 1rem 2.5rem;
             border-radius: 10px;
             font-weight: 700;
             text-decoration: none;
-            transition: all 0.3s ease;
-            font-size: 1rem;
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, #E50914 0%, #B81D24 100%);
-            color: #fff;
             box-shadow: 0 10px 25px rgba(229, 9, 20, 0.4);
+            transition: transform 0.25s ease;
         }
-        .btn-primary:hover {
+        a.btn:hover {
             transform: translateY(-3px);
-            box-shadow: 0 15px 35px rgba(229, 9, 20, 0.6);
-        }
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.05);
-            color: #e2e8f0;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-        }
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: translateY(-3px);
-        }
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            max-width: 1100px;
-            margin: 2rem auto 5rem;
-            padding: 0 2rem;
-        }
-        .card {
-            background: rgba(18, 18, 24, 0.7);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 16px;
-            padding: 2rem;
-            transition: all 0.3s ease;
-        }
-        .card:hover {
-            border-color: rgba(229, 9, 20, 0.4);
-            transform: translateY(-5px);
-        }
-        .card-icon {
-            font-size: 2rem;
-            margin-bottom: 1rem;
-        }
-        .card h3 {
-            font-size: 1.3rem;
-            margin-bottom: 0.75rem;
-            color: #fff;
-        }
-        .card p {
-            color: #94a3b8;
-            font-size: 0.95rem;
-            line-height: 1.6;
-        }
-        footer {
-            text-align: center;
-            padding: 2rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-            color: #64748b;
-            font-size: 0.9rem;
         }
     </style>
 </head>
 <body>
-    <header class="header">
-        <div class="logo">🍿 CINEMATCH PRO</div>
-        <div class="badge">Streamlit + TMDB API</div>
-    </header>
-
-    <main>
-        <section class="hero">
-            <div class="hero-tag">AI-Powered Movie Discovery</div>
-            <h1>Next-Generation Movie Recommendation Engine</h1>
-            <p>Find your next movie obsession with TF-IDF similarity algorithms, live TMDB weekly trending movies, embedded YouTube trailers, customizable filters, and persistent watchlists.</p>
-            
-            <div class="btn-group">
-                <a href="https://share.streamlit.io/" target="_blank" class="btn btn-primary">🚀 Launch App on Streamlit Cloud</a>
-            </div>
-        </section>
-
-        <section class="features">
-            <div class="card">
-                <div class="card-icon">🧠</div>
-                <h3>TF-IDF Similarity Engine</h3>
-                <p>Calculates cosine similarity vectors using n-gram tokenization and weighted director, genre, and cast tags.</p>
-            </div>
-            <div class="card">
-                <div class="card-icon">🎬</div>
-                <h3>Embedded Video Trailers</h3>
-                <p>Watch official YouTube movie trailers directly inside detail modals without leaving the application.</p>
-            </div>
-            <div class="card">
-                <div class="card-icon">🔍</div>
-                <h3>Advanced Filter Controls</h3>
-                <p>Filter candidates across 19 genres, minimum TMDB ratings, and release year ranges in real time.</p>
-            </div>
-            <div class="card">
-                <div class="card-icon">⭐</div>
-                <h3>Persistent Watchlist</h3>
-                <p>Save movies to your local collection JSON store and trigger instant content recommendations with one click.</p>
-            </div>
-        </section>
-    </main>
-
-    <footer>
-        <p>CineMatch Pro • Built with Streamlit, Python & TMDB API</p>
-    </footer>
+    <div class="container">
+        <h1>🍿 CineMatch Pro</h1>
+        <p>Redirecting to your live AI Movie Recommendation app...</p>
+        <a href="https://movie-recommender-9p6gkukrz6esesklqfenqg.streamlit.app/" class="btn">🚀 Open CineMatch Pro Live</a>
+    </div>
 </body>
 </html>
