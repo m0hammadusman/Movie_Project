@@ -469,18 +469,20 @@ with st.sidebar:
     st.markdown("---")
     
     # --- ADVANCED FILTERS CONTROL ---
+    def reset_filters():
+        st.session_state["filter_genres"] = []
+        st.session_state["filter_min_rating"] = 0.0
+        st.session_state["filter_year_range"] = (1950, 2026)
+
     with st.expander("🔍 **Filter Engine**", expanded=False):
         sel_genres = st.multiselect("Genres", ALL_GENRES, key="filter_genres")
         sel_rating = st.slider("Min Rating (⭐)", 0.0, 10.0, 0.0, 0.5, key="filter_min_rating")
         sel_years = st.slider("Release Years", 1950, 2026, (1950, 2026), key="filter_year_range")
         
-        if st.button("🔄 Reset Filters", use_container_width=True):
-            st.session_state.filter_genres = []
-            st.session_state.filter_min_rating = 0.0
-            st.session_state.filter_year_range = (1950, 2026)
-            st.rerun()
+        st.button("🔄 Reset Filters", use_container_width=True, on_click=reset_filters)
             
     st.caption("Data provided by TMDB")
+
 
 
 # --- ACTIVE MOVIE DETAIL MODAL HANDLER ---
