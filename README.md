@@ -3,9 +3,26 @@
 ![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.30+-red.svg)
 ![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-TF--IDF-orange.svg)
+![Deployment](https://img.shields.io/badge/Streamlit%20Cloud-100%25%20Free-brightgreen.svg)
 ![TMDB API](https://img.shields.io/badge/TMDB-API%20v3-green.svg)
 
-**CineMatch Pro** is a modern, high-performance web application for discovering movies, getting AI-driven content recommendations, viewing embedded trailers, and managing a personal watchlist.
+**CineMatch Pro** is a modern, high-performance web application for discovering movies, getting AI-driven content recommendations, viewing embedded trailers, filtering by genres/ratings, and managing a personal watchlist.
+
+---
+
+## 🌐 Free Live Deployment Guide (Streamlit Community Cloud)
+
+This app is optimized for **100% Free Lifetime Hosting** on **Streamlit Community Cloud**:
+
+1. Push this repository to your **GitHub** account.
+2. Visit **[share.streamlit.io](https://share.streamlit.io)** and log in with GitHub.
+3. Click **"New App"** and fill in:
+   - **Repository**: `your-username/Movie_Project`
+   - **Branch**: `main` (or `master`)
+   - **Main file path**: `recommender.py`
+4. Click **Deploy!** 🚀
+
+*Your app will be live 24/7 on a free URL like `https://cinematch-pro.streamlit.app`.*
 
 ---
 
@@ -32,6 +49,7 @@ Movie_Project/
 ├── user_data.json                 # Persistent Watchlist Data Store
 ├── requirements.txt               # Cleaned Python Dependencies
 ├── .env.example                   # Environment Configuration Template
+├── index.html                     # GitHub Pages Landing Page
 ├── movies.pkl                     # Processed Movies DataFrame Cache
 ├── similarity.pkl                 # Precalculated Cosine Similarity Matrix Cache
 └── README.md                      # Comprehensive Project Documentation
@@ -39,7 +57,7 @@ Movie_Project/
 
 ---
 
-## ⚡ Quick Start Guide
+## ⚡ Local Setup Guide
 
 ### 1. Prerequisites
 Ensure you have Python 3.10+ installed on your system.
