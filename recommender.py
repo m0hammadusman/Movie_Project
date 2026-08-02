@@ -327,15 +327,83 @@ def render_movie_modal(movie):
     st.markdown("---")
 
 
+ALL_GENRES = [
+    "Action", "Adventure", "Animation", "Comedy", "Crime", "Documentary",
+    "Drama", "Family", "Fantasy", "History", "Horror", "Music",
+    "Mystery", "Romance", "Science Fiction", "TV Movie", "Thriller", "War", "Western"
+]
+
+def apply_filters(movie_list, filter_genres=None, min_rating=0.0, year_range=None):
+    if not movie_list:
+        return []
+    filtered = []
+    for m in movie_list:
+        if not m:
+            continue
+            
+        # Rating Check
+        r = m.get('rating', 0.0) or m.get('vote_average', 0.0) or 0.0
+        if r < min_rating:
+            continue
+            
+        # Year Range Check
+        if year_range:
+            try:
+                raw_y = m.get('year') or m.get('release_date', '')
+                y = int(str(raw_y)[:4])
+                if y > 0 and (y < year_range[0] or y > year_range[1]):
+                    continue
+            except (ValueError, TypeError):
+                pass
+                
+        # Genre Filter Check
+        if filter_genres:
+            m_genres = [g.lower() for g in m.get('genres', [])]
+            if not any(fg.lower() in m_genres for fg in filter_genres):
+                continue
+                
+        filtered.append(m)
+    return filtered
+
 def fetch_trending():
     res = tmdb_get("/trending/movie/week")
     return res.get("results", [])
 
-def recommend(title):
+def recommend(title, filter_genres=None, min_rating=0.0, year_range=None, max_results=10):
     if title not in title_to_index or similarity is None: return []
     idx = title_to_index[title]
-    scores = sorted(list(enumerate(similarity[idx])), key=lambda x: x[1], reverse=True)[1:11]
-    return [fetch_details(movies_df.iloc[i].movie_id) for i, _ in scores]
+    
+    # Take top 60 candidates to allow filtering
+    scores = sorted(list(enumerate(similarity[idx])), key=lambda x: x[1], reverse=True)[1:60]
+    
+    results = []
+    for i, _ in scores:
+        details = fetch_details(movies_df.iloc[i].movie_id)
+        if not details:
+            continue
+            
+        r = details.get('rating', 0.0) or 0.0
+        if r < min_rating:
+            continue
+            
+        if year_range:
+            try:
+                y = int(str(details.get('year', '0'))[:4])
+                if y > 0 and (y < year_range[0] or y > year_range[1]):
+                    continue
+            except (ValueError, TypeError):
+                pass
+                
+        if filter_genres:
+            m_genres = [g.lower() for g in details.get('genres', [])]
+            if not any(fg.lower() in m_genres for fg in filter_genres):
+                continue
+                
+        results.append(details)
+        if len(results) >= max_results:
+            break
+            
+    return results
 
 # =========================================================
 # 🚀 5. APP LAYOUT
@@ -355,7 +423,21 @@ with st.sidebar:
     page = st.radio("MENU", ["🔥 Trending", "🎯 Recommendations", "⭐ Favorites"], label_visibility="collapsed")
     
     st.markdown("---")
+    
+    # --- ADVANCED FILTERS CONTROL ---
+    with st.expander("🔍 **Filter Engine**", expanded=False):
+        sel_genres = st.multiselect("Genres", ALL_GENRES, key="filter_genres")
+        sel_rating = st.slider("Min Rating (⭐)", 0.0, 10.0, 0.0, 0.5, key="filter_min_rating")
+        sel_years = st.slider("Release Years", 1950, 2026, (1950, 2026), key="filter_year_range")
+        
+        if st.button("🔄 Reset Filters", use_container_width=True):
+            st.session_state.filter_genres = []
+            st.session_state.filter_min_rating = 0.0
+            st.session_state.filter_year_range = (1950, 2026)
+            st.rerun()
+            
     st.caption("Data provided by TMDB")
+
 
 # --- ACTIVE MOVIE DETAIL MODAL HANDLER ---
 if "active_movie_modal" in st.session_state and st.session_state.active_movie_modal:
@@ -477,10 +559,20 @@ elif page == "🎯 Recommendations":
             if st.button("Get Recommendations", type="primary", use_container_width=True):
                 st.session_state.trigger_rec = True
 
+    f_genres = st.session_state.get("filter_genres", [])
+    f_rating = st.session_state.get("filter_min_rating", 0.0)
+    f_years = st.session_state.get("filter_year_range", (1950, 2026))
+
     if st.session_state.get("trigger_rec"):
-        recs = recommend(selected)
+        recs = recommend(selected, filter_genres=f_genres, min_rating=f_rating, year_range=f_years)
         if recs:
-            st.subheader(f"Because you watched '{selected}':")
+            filter_labels = []
+            if f_genres: filter_labels.append(f"Genres: {', '.join(f_genres)}")
+            if f_rating > 0: filter_labels.append(f"Rating ≥ ⭐ {f_rating}")
+            if f_years != (1950, 2026): filter_labels.append(f"Years: {f_years[0]}-{f_years[1]}")
+            
+            filter_suffix = f" • Filters Applied: [{', '.join(filter_labels)}]" if filter_labels else ""
+            st.subheader(f"Because you watched '{selected}'{filter_suffix}:")
             st.markdown("")
             
             # Responsive Grid
@@ -510,18 +602,27 @@ elif page == "🎯 Recommendations":
                                     st.session_state.active_movie_modal = m.get('id') or m.get('title')
                                     st.rerun()
         else:
-            st.warning("No matches found in database.")
+            st.warning("No matching movies found for the active filter settings. Try lowering the minimum rating or clearing genre filters in the sidebar!")
 
 # --- PAGE: FAVORITES ---
 elif page == "⭐ Favorites":
     st.title("⭐ My Watchlist")
-    watchlist = get_watchlist()
+    raw_watchlist = get_watchlist()
     
-    if not watchlist:
+    f_genres = st.session_state.get("filter_genres", [])
+    f_rating = st.session_state.get("filter_min_rating", 0.0)
+    f_years = st.session_state.get("filter_year_range", (1950, 2026))
+    
+    watchlist = apply_filters(raw_watchlist, filter_genres=f_genres, min_rating=f_rating, year_range=f_years)
+    
+    if not raw_watchlist:
         st.info("Your watchlist is currently empty! Explore 🔥 Trending or 🎯 Recommendations to save movies you want to watch.")
+    elif not watchlist:
+        st.warning("No saved movies match your active filter settings in the sidebar.")
     else:
         st.markdown(f"**{len(watchlist)} Saved Movie{'s' if len(watchlist) != 1 else ''}** in your collection")
         st.markdown("---")
+
         
         # Responsive Grid
         for i in range(0, len(watchlist), 5):
