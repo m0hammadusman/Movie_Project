@@ -4,8 +4,76 @@ import ast
 import requests
 import os
 import pickle
+import json
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+
+USER_DATA_FILE = "user_data.json"
+
+def load_user_data():
+    if os.path.exists(USER_DATA_FILE):
+        try:
+            with open(USER_DATA_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"profiles": {"default": {"watchlist": [], "ratings": {}, "prefs": {"genres": [], "actors": []}, "history": []}}, "active_profile": "default"}
+
+def save_user_data(data):
+    try:
+        with open(USER_DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        st.error(f"Error saving user data: {e}")
+
+def get_watchlist():
+    data = load_user_data()
+    active = data.get("active_profile", "default")
+    return data.get("profiles", {}).get(active, {}).get("watchlist", [])
+
+def is_in_watchlist(movie_id, title=""):
+    watchlist = get_watchlist()
+    for item in watchlist:
+        if (movie_id and item.get("id") == movie_id) or (title and item.get("title") == title):
+            return True
+    return False
+
+def toggle_watchlist(movie_dict):
+    data = load_user_data()
+    active = data.get("active_profile", "default")
+    if "profiles" not in data:
+        data["profiles"] = {}
+    if active not in data["profiles"]:
+        data["profiles"][active] = {"watchlist": [], "ratings": {}, "prefs": {"genres": [], "actors": []}, "history": []}
+    watchlist = data["profiles"][active]["watchlist"]
+    
+    m_id = movie_dict.get("id")
+    m_title = movie_dict.get("title")
+    
+    existing_idx = None
+    for idx, item in enumerate(watchlist):
+        if (m_id and item.get("id") == m_id) or (m_title and item.get("title") == m_title):
+            existing_idx = idx
+            break
+            
+    if existing_idx is not None:
+        watchlist.pop(existing_idx)
+        added = False
+    else:
+        watchlist.append({
+            "id": m_id,
+            "title": m_title,
+            "poster": movie_dict.get("poster"),
+            "year": movie_dict.get("year", "N/A"),
+            "rating": movie_dict.get("rating", 0),
+            "genres": movie_dict.get("genres", []),
+            "overview": movie_dict.get("overview", ""),
+            "trailer": movie_dict.get("trailer")
+        })
+        added = True
+    save_user_data(data)
+    return added
+
 
 # =========================================================
 # ⚙️ 1. CONFIGURATION
@@ -257,13 +325,20 @@ if page == "🔥 Trending":
                 st.markdown(f'<p class="hero-overview">{hero["overview"][:200]}...</p>', unsafe_allow_html=True)
                 
                 # Buttons Row
-                b1, b2 = st.columns([1, 2])
+                b1, b2, b3 = st.columns([1.2, 1.2, 1])
                 with b1:
                     if hero['trailer']:
                         st.link_button("▶ Play Trailer", hero['trailer'])
                     else:
                         st.button("No Trailer", disabled=True)
                 with b2:
+                    is_fav = is_in_watchlist(hero.get('id'), hero.get('title'))
+                    fav_btn_label = "❤️ In Watchlist" if is_fav else "+ Watchlist"
+                    if st.button(fav_btn_label, key=f"fav_hero_{hero.get('id')}"):
+                        added = toggle_watchlist(hero)
+                        st.toast("Added to Watchlist!" if added else "Removed from Watchlist")
+                        st.rerun()
+                with b3:
                     if st.button("More Info"):
                         st.session_state.selected_movie = hero['title']
                         st.toast(f"Selected {hero['title']}")
@@ -288,6 +363,21 @@ if page == "🔥 Trending":
                         st.image(poster, use_container_width=True)
                         st.write(f"**{m['title']}**")
                         st.caption(f"⭐ {round(m['vote_average'], 1)}")
+                        
+                        m_obj = {
+                            "id": m.get("id"),
+                            "title": m.get("title"),
+                            "poster": poster,
+                            "year": m.get("release_date", "N/A")[:4] if m.get("release_date") else "N/A",
+                            "rating": m.get("vote_average", 0),
+                            "overview": m.get("overview", "")
+                        }
+                        is_fav = is_in_watchlist(m.get('id'), m.get('title'))
+                        icon = "❤️ Saved" if is_fav else "+ Watchlist"
+                        if st.button(icon, key=f"fav_trend_{i}_{j}_{m.get('id')}"):
+                            added = toggle_watchlist(m_obj)
+                            st.toast(f"{'Saved' if added else 'Removed'} '{m['title']}'")
+                            st.rerun()
 
 # --- PAGE: RECOMMENDATIONS ---
 elif page == "🎯 Recommendations":
@@ -297,8 +387,11 @@ elif page == "🎯 Recommendations":
     with st.container():
         c1, c2 = st.columns([3, 1])
         with c1:
-            options = movies_df['title'].values if not movies_df.empty else []
-            selected = st.selectbox("I enjoyed watching...", options)
+            options = list(movies_df['title'].values) if not movies_df.empty else []
+            default_index = 0
+            if "fav_selected_movie" in st.session_state and st.session_state.fav_selected_movie in options:
+                default_index = options.index(st.session_state.fav_selected_movie)
+            selected = st.selectbox("I enjoyed watching...", options, index=default_index)
         with c2:
             st.markdown('<div style="height: 28px;"></div>', unsafe_allow_html=True) # Align button
             if st.button("Get Recommendations", type="primary", use_container_width=True):
@@ -317,18 +410,59 @@ elif page == "🎯 Recommendations":
                     if i + j < len(recs):
                         m = recs[i + j]
                         with cols[j]:
-                            st.image(m['poster'], use_container_width=True)
+                            if m.get('poster'):
+                                st.image(m['poster'], use_container_width=True)
                             st.markdown(f"**{m['title']}**")
                             st.caption(f"{m['year']} • ⭐ {round(m['rating'], 1)}")
-                            if m['trailer']:
-                                st.link_button("Trailer", m['trailer'])
+                            rc1, rc2 = st.columns(2)
+                            with rc1:
+                                if m['trailer']:
+                                    st.link_button("Trailer", m['trailer'])
+                            with rc2:
+                                is_fav = is_in_watchlist(m.get('id'), m.get('title'))
+                                fav_icon = "❤️ Saved" if is_fav else "+ Save"
+                                if st.button(fav_icon, key=f"fav_rec_{i}_{j}_{m.get('id') or m.get('title')}"):
+                                    added = toggle_watchlist(m)
+                                    st.toast(f"{'Saved' if added else 'Removed'} '{m['title']}'")
+                                    st.rerun()
         else:
             st.warning("No matches found in database.")
 
-# --- PAGE: FAVORITES (Placeholder) ---
+# --- PAGE: FAVORITES ---
 elif page == "⭐ Favorites":
-    st.title("My List")
-    st.info("This feature is coming in the next update! (Requires Database)")
+    st.title("⭐ My Watchlist")
+    watchlist = get_watchlist()
+    
+    if not watchlist:
+        st.info("Your watchlist is currently empty! Explore 🔥 Trending or 🎯 Recommendations to save movies you want to watch.")
+    else:
+        st.markdown(f"**{len(watchlist)} Saved Movie{'s' if len(watchlist) != 1 else ''}** in your collection")
+        st.markdown("---")
+        
+        # Responsive Grid
+        for i in range(0, len(watchlist), 5):
+            cols = st.columns(5)
+            for j in range(5):
+                if i + j < len(watchlist):
+                    m = watchlist[i + j]
+                    with cols[j]:
+                        if m.get('poster'):
+                            st.image(m['poster'], use_container_width=True)
+                        st.markdown(f"**{m.get('title')}**")
+                        st.caption(f"{m.get('year', 'N/A')} • ⭐ {round(m.get('rating', 0), 1)}")
+                        
+                        fc1, fc2 = st.columns(2)
+                        with fc1:
+                            if st.button("🎯 Recs", key=f"rec_fav_{i}_{j}_{m.get('id') or m.get('title')}"):
+                                st.session_state.fav_selected_movie = m.get('title')
+                                st.session_state.trigger_rec = True
+                                st.toast(f"Finding recommendations for '{m.get('title')}'...")
+                                st.rerun()
+                        with fc2:
+                            if st.button("🗑️ Remove", key=f"del_fav_{i}_{j}_{m.get('id') or m.get('title')}"):
+                                toggle_watchlist(m)
+                                st.toast(f"Removed '{m.get('title')}' from watchlist")
+                                st.rerun()
 
 # --- FOOTER ---
-st.markdown('<div class="footer">Designed by <b>Usman</b> • Powered by TMDB API</div>', unsafe_allow_html=True)
+st.markdown('<div class="footer">Designed by <b>Usman</b> • Powered by TMDB API</div>', unsafe_allow_html=True)
