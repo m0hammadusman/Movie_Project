@@ -91,119 +91,158 @@ st.set_page_config(
 )
 
 # =========================================================
-# 🎨 2. PROFESSIONAL CSS (HERO & SIDEBAR)
+# 🎨 2. PROFESSIONAL GLASSMORPHISM CSS
 # =========================================================
 st.markdown("""
 <style>
-    /* 1. APP BACKGROUND */
+    /* 1. APP BACKGROUND & TYPOGRAPHY */
     .stApp {
-        background-color: #0f0f0f;
-        color: #e0e0e0;
-        font-family: 'Inter', sans-serif;
+        background: linear-gradient(135deg, #090a0f 0%, #12151e 50%, #08080c 100%);
+        color: #e2e8f0;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
     }
 
-    /* 2. CUSTOM SIDEBAR */
+    /* CUSTOM SCROLLBAR */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+        background: #090a0f;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #2d3748;
+        border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #E50914;
+    }
+
+    /* 2. GLASSMORPHISM SIDEBAR */
     section[data-testid="stSidebar"] {
-        background-color: #050505;
-        border-right: 1px solid #222;
+        background: rgba(8, 8, 12, 0.92);
+        backdrop-filter: blur(20px);
+        border-right: 1px solid rgba(255, 255, 255, 0.07);
     }
     
-    /* Hide default radio buttons circle */
     div[role="radiogroup"] > label > div:first-of-type {
         display: none;
     }
-    /* Style the radio labels to look like menu items */
     div[role="radiogroup"] label {
         padding: 12px 20px;
-        border-radius: 8px;
-        margin-bottom: 5px;
+        border-radius: 10px;
+        margin-bottom: 6px;
         border: 1px solid transparent;
-        transition: all 0.3s ease;
+        transition: all 0.25s ease;
         cursor: pointer;
-        font-weight: 500;
+        font-weight: 600;
+        background: rgba(255, 255, 255, 0.02);
     }
-    /* Hover state for menu items */
     div[role="radiogroup"] label:hover {
-        background-color: #1a1a1a;
+        background: rgba(229, 9, 20, 0.15);
         color: #E50914;
-        border-color: #333;
-    }
-    /* Active state is handled by Streamlit internally, but we can style the text */
-    div[role="radiogroup"] label[data-testid="stMarkdownContainer"] p {
-        font-size: 16px;
+        border-color: rgba(229, 9, 20, 0.3);
+        transform: translateX(4px);
     }
 
-    /* 3. HERO SECTION TYPOGRAPHY */
+    /* 3. HERO & HEADERS */
     .hero-title {
-        font-size: 3.5rem;
+        font-size: 3.2rem;
         font-weight: 900;
         line-height: 1.1;
-        background: linear-gradient(90deg, #ffffff, #aaaaaa);
+        background: linear-gradient(90deg, #ffffff 0%, #cbd5e1 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        margin-bottom: 10px;
+        margin-bottom: 12px;
+        letter-spacing: -0.5px;
     }
     .hero-tagline {
         color: #E50914;
-        font-size: 1.2rem;
-        font-weight: 700;
+        font-size: 1.1rem;
+        font-weight: 800;
         text-transform: uppercase;
-        letter-spacing: 2px;
-        margin-bottom: 15px;
+        letter-spacing: 3px;
+        margin-bottom: 12px;
     }
     .hero-overview {
-        color: #ccc;
-        font-size: 1.1rem;
-        line-height: 1.6;
-        margin-bottom: 25px;
+        color: #94a3b8;
+        font-size: 1.05rem;
+        line-height: 1.65;
+        margin-bottom: 24px;
     }
 
-    /* 4. MOVIE CARDS (Grid) */
+    /* 4. MOVIE CARDS & HOVER EFFECTS */
     div[data-testid="stImage"] img {
-        border-radius: 12px;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        border-radius: 14px;
+        transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.35s ease;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.5);
     }
     div[data-testid="stImage"] img:hover {
-        transform: scale(1.05);
-        box-shadow: 0 12px 30px rgba(229, 9, 20, 0.4);
+        transform: translateY(-6px) scale(1.03);
+        box-shadow: 0 16px 35px rgba(229, 9, 20, 0.45);
         cursor: pointer;
     }
 
-    /* 5. BUTTONS */
+    /* 5. GENRE PILLS & RATING BADGES */
+    .genre-pill {
+        display: inline-block;
+        background: rgba(229, 9, 20, 0.15);
+        color: #ff5252;
+        border: 1px solid rgba(229, 9, 20, 0.35);
+        border-radius: 20px;
+        padding: 4px 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-right: 6px;
+        margin-bottom: 6px;
+    }
+    .rating-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #ffb703, #fb8500);
+        color: #000;
+        font-weight: 800;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+    }
+
+    /* 6. BUTTONS */
     div.stButton > button {
-        background: #E50914;
+        background: linear-gradient(135deg, #E50914 0%, #B81D24 100%);
         color: white;
         border: none;
-        border-radius: 6px;
-        font-weight: bold;
-        padding: 0.5rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 700;
+        padding: 0.55rem 1.4rem;
+        transition: all 0.25s ease;
     }
     div.stButton > button:hover {
-        background: #b20710;
-        box-shadow: 0 0 10px rgba(229, 9, 20, 0.5);
+        background: linear-gradient(135deg, #f40d1a 0%, #d62229 100%);
+        box-shadow: 0 0 15px rgba(229, 9, 20, 0.6);
+        transform: translateY(-2px);
     }
     
-    /* 6. FOOTER */
+    /* 7. FOOTER */
     .footer {
         position: fixed;
         left: 0;
         bottom: 0;
         width: 100%;
-        background-color: #000;
-        color: #555;
+        background: rgba(5, 5, 8, 0.95);
+        backdrop-filter: blur(10px);
+        color: #64748b;
         text-align: center;
-        padding: 8px;
-        font-size: 11px;
-        border-top: 1px solid #222;
+        padding: 10px;
+        font-size: 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
         z-index: 999;
     }
     
-    /* Hide Default Header/Footer */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
+
 
 # =========================================================
 # 🧠 3. DATA ENGINE
@@ -298,10 +337,13 @@ def render_movie_modal(movie):
             if movie.get('tagline'):
                 st.markdown(f"*\"{movie['tagline']}\"*")
             
-            st.markdown(f"**Year:** {movie.get('year')}  |  **Rating:** ⭐ **{round(movie.get('rating', 0), 1)}/10** ({movie.get('vote_count', 0):,} votes)  |  **Runtime:** ⏱️ {movie.get('runtime', 'N/A')}")
-            st.markdown(f"**Director:** 🎥 {movie.get('director', 'N/A')}")
+            rating_html = f'<span class="rating-badge">⭐ {round(movie.get("rating", 0), 1)} / 10</span>'
+            st.markdown(f"{rating_html} &nbsp; • &nbsp; **{movie.get('year')}** &nbsp; • &nbsp; ⏱️ {movie.get('runtime', 'N/A')} &nbsp; • &nbsp; 🎥 **Director:** {movie.get('director', 'N/A')}", unsafe_allow_html=True)
+            
             if movie.get('genres'):
-                st.markdown(f"**Genres:** {', '.join(movie['genres'])}")
+                pills_html = "".join([f'<span class="genre-pill">{g}</span>' for g in movie['genres']])
+                st.markdown(f'<div style="margin-top: 10px; margin-bottom: 14px;">{pills_html}</div>', unsafe_allow_html=True)
+                
             if movie.get('cast'):
                 st.markdown(f"**Starring:** {', '.join(movie['cast'])}")
                 
