@@ -1,4 +1,4 @@
-﻿import streamlit as st
+import streamlit as st
 import pandas as pd
 import ast
 import requests
@@ -84,110 +84,311 @@ MOVIES_PICKLE = "movies.pkl"
 SIMILARITY_PICKLE = "similarity.pkl"
 
 st.set_page_config(
-    page_title="CineMatch — AI Powered Discovery", 
+    page_title="CINEMATCH — AI Movie Discovery", 
     page_icon="🍿", 
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # =========================================================
-# 🎨 PERFECT REFERENCE UI CSS OVERRIDES
+# 🎨 EXACT USER-PROVIDED HTML & CSS TEMPLATE STYLES
 # =========================================================
 st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&display=swap');
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-    /* Hide Streamlit Native Header Chrome */
+<style>
+    /* --- RESET & GLOBALS --- */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
     header[data-testid="stHeader"] { display: none !important; }
     #MainMenu { visibility: hidden !important; }
     footer { visibility: hidden !important; }
     .stDeployButton { display: none !important; }
 
-    /* Root App Background */
     html, body, .stApp {
-        background-color: #0b0d13 !important;
-        color: #e2e8f0;
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: #0b0d13 !important;
+      color: #ffffff;
     }
 
     .main .block-container {
-        padding-top: 1rem !important;
-        padding-bottom: 2rem !important;
-        padding-left: 2rem !important;
-        padding-right: 2rem !important;
-        max-width: 100% !important;
+      padding-top: 0rem !important;
+      padding-bottom: 2rem !important;
+      padding-left: 0rem !important;
+      padding-right: 0rem !important;
+      max-width: 100% !important;
     }
 
-    /* Scrollbars */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #0b0d13; }
-    ::-webkit-scrollbar-thumb { background: #1a1e29; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #E50914; }
-
-    /* Sidebar Customization */
+    /* --- SIDEBAR --- */
     section[data-testid="stSidebar"] {
-        background-color: #06070a !important;
-        border-right: 1px solid #161a23 !important;
-        padding-top: 1.2rem !important;
-        width: 260px !important;
+      width: 260px !important;
+      background-color: #0f1118 !important;
+      border-right: 1px solid #1a1d28 !important;
+      padding: 24px 20px !important;
     }
 
-    /* Sidebar Menu Buttons Styling */
+    .logo-title {
+      color: #e50914;
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 1px;
+    }
+
+    .logo-subtitle {
+      color: #5d6578;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-top: 2px;
+    }
+
+    .nav-menu {
+      margin-top: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    /* Streamlit Sidebar Buttons override */
     div[data-testid="stSidebar"] div.stButton > button {
-        background-color: transparent !important;
-        color: #8e95a5 !important;
-        border: 1px solid transparent !important;
-        text-align: left !important;
-        justify-content: flex-start !important;
-        font-size: 15px !important;
-        font-weight: 600 !important;
-        padding: 11px 16px !important;
-        border-radius: 8px !important;
-        width: 100% !important;
-        margin-bottom: 4px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: flex-start !important;
+      gap: 12px !important;
+      padding: 12px 16px !important;
+      color: #8c94a8 !important;
+      background-color: transparent !important;
+      font-size: 14px !important;
+      font-weight: 500 !important;
+      border-radius: 8px !important;
+      border: none !important;
+      width: 100% !important;
+      text-align: left !important;
+      transition: all 0.2s !important;
+      margin-bottom: 2px !important;
     }
+
     div[data-testid="stSidebar"] div.stButton > button:hover {
-        background-color: #151821 !important;
-        color: #ffffff !important;
+      color: #fff !important;
+      background-color: #181b26 !important;
     }
-    .active-nav-container div.stButton > button {
-        background: linear-gradient(90deg, #a8121a 0%, #7f1d1d 100%) !important;
-        color: #ffffff !important;
-        font-weight: 700 !important;
-        box-shadow: 0 4px 12px rgba(168, 18, 26, 0.4) !important;
+
+    .nav-item-active div.stButton > button {
+      background-color: #921c22 !important;
+      color: #ffffff !important;
+      font-weight: 600 !important;
+    }
+
+    .quick-filters {
+      margin-top: 36px;
+    }
+
+    .filter-title {
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 700;
+      display: block;
+      margin-bottom: 12px;
+    }
+
+    .filter-chip-btn div.stButton > button {
+      background-color: #1a1d27 !important;
+      color: #a0a8be !important;
+      border: none !important;
+      padding: 6px 12px !important;
+      border-radius: 16px !important;
+      font-size: 12px !important;
+      cursor: pointer !important;
+      justify-content: center !important;
+    }
+
+    .filter-chip-btn div.stButton > button:hover {
+      background-color: #262a38 !important;
+      color: #fff !important;
+    }
+
+    .sidebar-footer {
+      font-size: 12px;
+      color: #5d6578;
+      border-top: 1px solid #1a1d28;
+      padding-top: 16px;
+      margin-top: 40px;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+      color: #a0a8be;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      background-color: #22c55e;
+      border-radius: 50%;
+    }
+
+    /* Top Header */
+    .top-header-wrap {
+      padding: 16px 36px;
+    }
+
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      float: right;
+    }
+
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .user-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .user-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .user-badge {
+      font-size: 10px;
+      color: #5d6578;
+    }
+
+    /* Hero Banner */
+    .hero-section-wrap {
+      position: relative;
+      min-height: 380px;
+      padding: 30px 36px;
+    }
+
+    .trending-badge {
+      background-color: #1a1d27;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    .movie-title {
+      font-size: 42px;
+      font-weight: 800;
+      line-height: 1.1;
+      margin: 12px 0 10px 0;
+      color: #fff;
+    }
+
+    .gradient-text {
+      background: linear-gradient(90deg, #d8809a 0%, #a291f0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .movie-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #a0a8be;
+      margin-bottom: 12px;
+    }
+
+    .rating {
+      color: #facc15;
+      font-weight: 700;
+    }
+
+    .pg-badge {
+      border: 1px solid #3a3f54;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 10px;
+    }
+
+    .movie-synopsis {
+      font-size: 13px;
+      color: #8c94a8;
+      line-height: 1.5;
+      margin-bottom: 20px;
+      max-width: 540px;
     }
 
     /* Main Body Buttons */
-    .main div.stButton > button {
-        background-color: #E50914 !important;
-        color: #ffffff !important;
-        border: none !important;
-        border-radius: 6px !important;
-        font-weight: 800 !important;
-        padding: 0.65rem 1.6rem !important;
-        transition: all 0.2s ease !important;
-    }
-    .main div.stButton > button:hover {
-        background-color: #b91c1c !important;
-        box-shadow: 0 0 16px rgba(229, 9, 20, 0.5) !important;
-        transform: translateY(-2px) !important;
+    .btn-primary-red div.stButton > button {
+      background-color: #e50914 !important;
+      color: #fff !important;
+      padding: 10px 20px !important;
+      border-radius: 6px !important;
+      font-size: 13px !important;
+      font-weight: 600 !important;
+      border: none !important;
     }
 
-    /* Glass Secondary Button */
-    .glass-btn-wrap div.stButton > button {
-        background-color: rgba(255, 255, 255, 0.08) !important;
-        border: 1px solid rgba(255, 255, 255, 0.25) !important;
-        color: #ffffff !important;
+    .btn-secondary-dark div.stButton > button {
+      background-color: #202433 !important;
+      color: #fff !important;
+      padding: 10px 20px !important;
+      border-radius: 6px !important;
+      font-size: 13px !important;
+      font-weight: 600 !important;
+      border: none !important;
     }
 
-    /* Card Image Hover */
+    /* Recommendations Section */
+    .recommendations-section-wrap {
+      padding: 24px 36px;
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+      color: #a0a8be;
+    }
+
+    .card-rating {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: #facc15;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 6px;
+      border-radius: 4px;
+      backdrop-filter: blur(4px);
+    }
+
+    .card-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      margin-top: 6px;
+    }
+
     div[data-testid="stImage"] img {
-        border-radius: 10px;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+      border-radius: 8px;
+      transition: transform 0.2s;
     }
     div[data-testid="stImage"] img:hover {
-        transform: translateY(-5px) scale(1.03);
-        box-shadow: 0 12px 25px rgba(229, 9, 20, 0.4);
+      transform: scale(1.03);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -281,11 +482,11 @@ def render_movie_modal(movie):
             if movie.get('tagline'):
                 st.markdown(f"*\"{movie['tagline']}\"*")
             
-            rating_html = f'<span style="background:rgba(0,0,0,0.85); color:#f59e0b; font-weight:800; font-size:12px; padding:3px 8px; border-radius:5px;">⭐ {round(movie.get("rating", 0), 1)} / 10</span>'
+            rating_html = f'<span class="rating"><i class="fa-solid fa-star"></i> {round(movie.get("rating", 0), 1)} / 10</span>'
             st.markdown(f"{rating_html} &nbsp; • &nbsp; **{movie.get('year')}** &nbsp; • &nbsp; ⏱️ {movie.get('runtime', 'N/A')} &nbsp; • &nbsp; 🎥 **Director:** {movie.get('director', 'N/A')}", unsafe_allow_html=True)
             
             if movie.get('genres'):
-                pills_html = "".join([f'<span style="display:inline-block; background:rgba(229,9,20,0.15); color:#ff5252; border:1px solid rgba(229,9,20,0.3); border-radius:16px; padding:3px 10px; font-size:12px; margin-right:6px;">{g}</span>' for g in movie['genres']])
+                pills_html = "".join([f'<span style="display:inline-block; background:#1a1d27; color:#a0a8be; border-radius:16px; padding:4px 10px; font-size:12px; margin-right:6px;">{g}</span>' for g in movie['genres']])
                 st.markdown(f'<div style="margin-top: 10px; margin-bottom: 14px;">{pills_html}</div>', unsafe_allow_html=True)
                 
             if movie.get('cast'):
@@ -298,14 +499,18 @@ def render_movie_modal(movie):
             with btn_c1:
                 is_fav = is_in_watchlist(movie.get('id'), movie.get('title'))
                 btn_label = "❤️ In List" if is_fav else "+ Add to List"
+                st.markdown('<div class="btn-primary-red">', unsafe_allow_html=True)
                 if st.button(btn_label, key=f"modal_fav_{movie.get('id') or movie.get('title')}"):
                     added = toggle_watchlist(movie)
                     st.toast("Added to List!" if added else "Removed from List")
                     st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
             with btn_c2:
+                st.markdown('<div class="btn-secondary-dark">', unsafe_allow_html=True)
                 if st.button("❌ Close", key="close_modal_btn"):
                     del st.session_state["active_movie_modal"]
                     st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
                     
         if movie.get('trailer'):
             st.markdown("### 🍿 Official Trailer")
@@ -390,55 +595,65 @@ def recommend(title, filter_genres=None, min_rating=0.0, year_range=None, max_re
 # 🚀 APP NAVIGATION & STATE
 # =========================================================
 if "current_page" not in st.session_state:
-    st.session_state.current_page = "🔥 Trending"
+    st.session_state.current_page = "Trending"
 
-# --- LEFT SIDEBAR NAVIGATION (REFERENCE UI MATCH) ---
+# --- LEFT SIDEBAR (EXACT USER TEMPLATE MATCH) ---
 with st.sidebar:
     st.markdown("""
-    <div style="padding: 5px 0 20px 0;">
-        <h1 class="brand-logo-text">CINEMATCH</h1>
-        <p class="brand-sub-text">AI-POWERED DISCOVERY</p>
+    <div class="logo">
+      <h1 class="logo-title">CINEMATCH</h1>
+      <p class="logo-subtitle">AI-POWERED DISCOVERY</p>
     </div>
     """, unsafe_allow_html=True)
     
     nav_items = [
-        ("🔥 Trending", "nav_tr"),
-        ("🔮 Recommendations", "nav_rec"),
-        ("🤍 Favorites", "nav_fav"),
-        ("⏱️ Watch History", "nav_hist")
+        ("Trending", "nav_tr"),
+        ("Recommendations", "nav_rec"),
+        ("Favorites", "nav_fav"),
+        ("Watch History", "nav_hist")
     ]
     
+    st.markdown('<div class="nav-menu">', unsafe_allow_html=True)
     for label, key in nav_items:
         is_active = (st.session_state.current_page == label)
         if is_active:
-            st.markdown('<div class="active-nav-container">', unsafe_allow_html=True)
-            if st.button(label, key=key):
+            st.markdown('<div class="nav-item-active">', unsafe_allow_html=True)
+            if st.button(f"{label}", key=key):
                 st.session_state.current_page = label
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
         else:
-            if st.button(label, key=key):
+            if st.button(f"{label}", key=key):
                 st.session_state.current_page = label
                 st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
-    st.markdown("<p style='color:#ffffff; font-weight:800; font-size:13px; margin-bottom:8px;'>Quick Filters</p>", unsafe_allow_html=True)
+    # Quick Filters
+    st.markdown("""
+    <div class="quick-filters">
+      <span class="filter-title">Quick Filters</span>
+    </div>
+    """, unsafe_allow_html=True)
     
     q1, q2 = st.columns(2)
     with q1:
+        st.markdown('<div class="filter-chip-btn">', unsafe_allow_html=True)
         if st.button("Action", key="qf_act"):
             st.session_state.filter_genres = ["Action"]
             st.rerun()
         if st.button("Mind-Bending", key="qf_mb"):
             st.session_state.filter_genres = ["Science Fiction", "Mystery"]
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
     with q2:
+        st.markdown('<div class="filter-chip-btn">', unsafe_allow_html=True)
         if st.button("Sci-Fi", key="qf_sf"):
             st.session_state.filter_genres = ["Science Fiction"]
             st.rerun()
         if st.button("Space", key="qf_sp"):
             st.session_state.filter_genres = ["Science Fiction", "Adventure"]
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("---")
     
@@ -454,21 +669,24 @@ with st.sidebar:
         st.button("🔄 Reset Filters", use_container_width=True, on_click=reset_filters)
 
     st.markdown("""
-    <div style='margin-top: 35px; font-size: 11px; color: #52525b;'>
-        <p style='margin:0;'>Data by TMDB</p>
-        <p style='color: #22c55e; margin-top:3px; font-weight:700;'>🟢 Online</p>
+    <div class="sidebar-footer">
+      <p>Data by TMDB</p>
+      <div class="status-indicator">
+        <span class="dot"></span> Online
+      </div>
     </div>
     """, unsafe_allow_html=True)
 
-# --- TOP SEARCH & PROFILE BAR (MATCHES REFERENCE IMAGE) ---
+# --- TOP SEARCH & USER PROFILE HEADER (EXACT USER TEMPLATE MATCH) ---
 top_col1, top_col2 = st.columns([3.6, 1])
 
 with top_col1:
+    st.markdown('<div class="top-header-wrap">', unsafe_allow_html=True)
     sc1, sc2 = st.columns([4.2, 1])
     with sc1:
         ai_prompt = st.text_input(
             "Ask AI Search", 
-            placeholder='🔍 Ask AI: "Show me movies like Interstellar with a mind-bending twist..."',
+            placeholder='Ask AI: "Show me movies like interstellar with a mind-bending twist..."',
             label_visibility="collapsed"
         )
     with sc2:
@@ -476,21 +694,22 @@ with top_col1:
             if ai_prompt:
                 st.session_state.fav_selected_movie = ai_prompt
                 st.session_state.trigger_rec = True
-                st.session_state.current_page = "🔮 Recommendations"
+                st.session_state.current_page = "Recommendations"
                 st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
 with top_col2:
     st.markdown("""
-    <div class="profile-header-box">
-        <div class="avatar-img" style="background:#2563eb; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:bold;">A</div>
-        <div>
-            <div style="font-weight: 700; font-size: 13px; color: #ffffff;">Alex Morgan ⌵</div>
-            <div style="font-size: 10px; color: #8e95a5;">Pro Member</div>
+    <div class="top-header-wrap">
+      <div class="user-profile">
+        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100" alt="Alex Morgan" class="avatar">
+        <div class="user-info">
+          <span class="user-name">Alex Morgan <i class="fa-solid fa-chevron-down" style="font-size: 10px;"></i></span>
+          <span class="user-badge">Pro Member</span>
         </div>
+      </div>
     </div>
     """, unsafe_allow_html=True)
-
-st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
 # --- ACTIVE MOVIE DETAIL MODAL HANDLER ---
 if "active_movie_modal" in st.session_state and st.session_state.active_movie_modal:
@@ -509,8 +728,8 @@ if "active_movie_modal" in st.session_state and st.session_state.active_movie_mo
     if modal_details:
         render_movie_modal(modal_details)
 
-# --- PAGE: TRENDING (HERO BANNER + RECOMMENDATIONS ROW) ---
-if st.session_state.current_page in ["🔥 Trending", "⏱️ Watch History"]:
+# --- PAGE: TRENDING (EXACT USER HERO & RECOMMENDATIONS GRID) ---
+if st.session_state.current_page in ["Trending", "Watch History"]:
     trending = fetch_trending()
     
     if trending:
@@ -518,44 +737,56 @@ if st.session_state.current_page in ["🔥 Trending", "⏱️ Watch History"]:
         hero = fetch_details(top_movie['id'])
         
         # --- HERO BANNER ---
+        hero_bg_url = hero.get('backdrop') or 'http://googleusercontent.com/image_collection/image_retrieval/6629781975895960306_0'
+        
         hero_container = st.container()
         with hero_container:
+            st.markdown(f'''
+            <div style="position: relative; min-height: 400px; padding: 40px 36px; display: flex; align-items: flex-end; background-image: url('{hero_bg_url}'); background-size: cover; background-position: center top;">
+              <div class="hero-overlay-box"></div>
+            </div>
+            ''', unsafe_allow_html=True)
+            
             col1, col2 = st.columns([1.1, 1], gap="large")
             with col1:
-                st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
-                st.markdown('<span class="hero-badge-tag">#1 TRENDING MOVIE</span>', unsafe_allow_html=True)
-                st.markdown(f'<h1 class="hero-title-text">{hero["title"]}</h1>', unsafe_allow_html=True)
+                st.markdown('<span class="trending-badge">#1 TRENDING MOVIE</span>', unsafe_allow_html=True)
+                st.markdown(f'<h1 class="movie-title">{hero["title"]}</h1>', unsafe_allow_html=True)
                 
                 rating_val = round(hero.get('rating', 8.0), 1)
-                genres_str = ", ".join(hero.get('genres', ['Sci-Fi', 'Action']))
+                genres_str = ", ".join(hero.get('genres', ['Sci-Fi', 'Action', 'Adventure']))
                 st.markdown(f'''
-                <div class="hero-meta-row">
-                    <span class="star-yellow">⭐ {rating_val}</span> &nbsp;•&nbsp; 
-                    <span>{hero.get("year", "2026")}</span> &nbsp;•&nbsp; 
-                    <span style="border:1px solid #475569; padding:2px 6px; border-radius:4px; font-size:11px; color:#ffffff;">PG-13</span> &nbsp;•&nbsp; 
-                    <span>{genres_str}</span>
+                <div class="movie-meta">
+                  <span class="rating"><i class="fa-solid fa-star"></i> {rating_val}</span>
+                  <span>•</span>
+                  <span>{hero.get("year", "2026")}</span>
+                  <span>•</span>
+                  <span class="pg-badge">PG-13</span>
+                  <span>•</span>
+                  <span class="genres">{genres_str}</span>
                 </div>
                 ''', unsafe_allow_html=True)
                 
-                st.markdown(f'<p class="hero-synopsis">{hero["overview"][:220]}...</p>', unsafe_allow_html=True)
+                st.markdown(f'<p class="movie-synopsis">{hero["overview"][:220]}...</p>', unsafe_allow_html=True)
                 
                 hb1, hb2, hb3 = st.columns([1.2, 1.2, 1])
                 with hb1:
+                    st.markdown('<div class="btn-primary-red">', unsafe_allow_html=True)
                     if hero.get('trailer'):
                         st.link_button("▶ Watch Trailer", hero['trailer'])
                     else:
                         st.button("No Trailer", disabled=True)
+                    st.markdown('</div>', unsafe_allow_html=True)
                 with hb2:
                     is_fav = is_in_watchlist(hero.get('id'), hero.get('title'))
                     fav_label = "❤️ Saved" if is_fav else "+ Add to List"
-                    st.markdown('<div class="glass-btn-wrap">', unsafe_allow_html=True)
+                    st.markdown('<div class="btn-secondary-dark">', unsafe_allow_html=True)
                     if st.button(fav_label, key=f"fav_hero_{hero.get('id')}"):
                         added = toggle_watchlist(hero)
                         st.toast("Added to List!" if added else "Removed from List")
                         st.rerun()
                     st.markdown('</div>', unsafe_allow_html=True)
                 with hb3:
-                    st.markdown('<div class="glass-btn-wrap">', unsafe_allow_html=True)
+                    st.markdown('<div class="btn-secondary-dark">', unsafe_allow_html=True)
                     if st.button("ℹ️ Info", key=f"info_hero_{hero.get('id')}"):
                         st.session_state.active_movie_modal = hero.get('id')
                         st.rerun()
@@ -564,23 +795,22 @@ if st.session_state.current_page in ["🔥 Trending", "⏱️ Watch History"]:
             with col2:
                 if hero.get('backdrop'):
                     st.image(hero['backdrop'], use_container_width=True)
-                elif hero.get('poster'):
-                    st.image(hero['poster'], use_container_width=True)
 
-        st.markdown('<p class="section-title-text">AI RECOMMENDED FOR YOU</p>', unsafe_allow_html=True)
+        # --- RECOMMENDATIONS GRID SECTION ---
+        st.markdown('<div class="recommendations-section-wrap">', unsafe_allow_html=True)
+        st.markdown('<h2 class="section-title">AI RECOMMENDED FOR YOU</h2>', unsafe_allow_html=True)
         
-        for i in range(1, 11, 5):
+        for i in range(1, 11, 5): # Skip #1
             cols = st.columns(5)
             for j in range(5):
                 if i + j < len(trending):
                     m = trending[i + j]
                     with cols[j]:
-                        poster = TMDB_IMG + m.get('poster_path', '') if m.get('poster_path') else ''
+                        poster = TMDB_IMG + m.get('poster_path', '') if m.get('poster_path') else 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&q=80&w=400'
                         vote_avg = round(m.get('vote_average', 8.0), 1)
                         
-                        if poster:
-                            st.image(poster, use_container_width=True)
-                        st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:center; margin-top:6px;'><b>{m['title'][:18]}</b> <span class='card-rating-tag'>⭐ {vote_avg}</span></div>", unsafe_allow_html=True)
+                        st.image(poster, use_container_width=True)
+                        st.markdown(f'<h3 class="card-title">{m["title"]} &nbsp; <span class="rating"><i class="fa-solid fa-star"></i> {vote_avg}</span></h3>', unsafe_allow_html=True)
                         
                         m_obj = {
                             "id": m.get("id"),
@@ -602,10 +832,12 @@ if st.session_state.current_page in ["🔥 Trending", "⏱️ Watch History"]:
                             if st.button("ℹ️ Info", key=f"info_trend_{i}_{j}_{m.get('id')}"):
                                 st.session_state.active_movie_modal = m.get('id')
                                 st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # --- PAGE: RECOMMENDATIONS ---
-elif st.session_state.current_page == "🔮 Recommendations":
-    st.markdown('<p class="section-title-text">FIND YOUR NEXT OBSESSION</p>', unsafe_allow_html=True)
+elif st.session_state.current_page == "Recommendations":
+    st.markdown('<div class="recommendations-section-wrap">', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-title">FIND YOUR NEXT OBSESSION</h2>', unsafe_allow_html=True)
     
     with st.container():
         c1, c2 = st.columns([3, 1])
@@ -633,7 +865,7 @@ elif st.session_state.current_page == "🔮 Recommendations":
             if f_years != (1950, 2026): filter_labels.append(f"Years: {f_years[0]}-{f_years[1]}")
             
             filter_suffix = f" • Filters Applied: [{', '.join(filter_labels)}]" if filter_labels else ""
-            st.markdown(f'<p class="section-title-text">BECAUSE YOU WATCHED \'{selected}\'{filter_suffix}:</p>', unsafe_allow_html=True)
+            st.markdown(f'<h2 class="section-title">BECAUSE YOU WATCHED \'{selected}\'{filter_suffix}:</h2>', unsafe_allow_html=True)
             
             for i in range(0, len(recs), 5):
                 cols = st.columns(5)
@@ -643,7 +875,7 @@ elif st.session_state.current_page == "🔮 Recommendations":
                         with cols[j]:
                             if m.get('poster'):
                                 st.image(m['poster'], use_container_width=True)
-                            st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:center; margin-top:6px;'><b>{m['title'][:18]}</b> <span class='card-rating-tag'>⭐ {round(m['rating'], 1)}</span></div>", unsafe_allow_html=True)
+                            st.markdown(f'<h3 class="card-title">{m["title"]}</h3>', unsafe_allow_html=True)
                             
                             rc1, rc2, rc3 = st.columns([1.1, 1, 1])
                             with rc1:
@@ -662,10 +894,12 @@ elif st.session_state.current_page == "🔮 Recommendations":
                                     st.rerun()
         else:
             st.warning("No matching movies found for the active filter settings.")
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # --- PAGE: FAVORITES ---
-elif st.session_state.current_page == "🤍 Favorites":
-    st.markdown('<p class="section-title-text">⭐ MY WATCHLIST COLLECTION</p>', unsafe_allow_html=True)
+elif st.session_state.current_page == "Favorites":
+    st.markdown('<div class="recommendations-section-wrap">', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-title">⭐ MY WATCHLIST COLLECTION</h2>', unsafe_allow_html=True)
     raw_watchlist = get_watchlist()
     
     f_genres = st.session_state.get("filter_genres", [])
@@ -675,7 +909,7 @@ elif st.session_state.current_page == "🤍 Favorites":
     watchlist = apply_filters(raw_watchlist, filter_genres=f_genres, min_rating=f_rating, year_range=f_years)
     
     if not raw_watchlist:
-        st.info("Your watchlist is currently empty! Explore 🔥 Trending or 🔮 Recommendations to save movies.")
+        st.info("Your watchlist is currently empty! Explore Trending or Recommendations to save movies.")
     elif not watchlist:
         st.warning("No saved movies match your active filter settings.")
     else:
@@ -690,7 +924,7 @@ elif st.session_state.current_page == "🤍 Favorites":
                     with cols[j]:
                         if m.get('poster'):
                             st.image(m['poster'], use_container_width=True)
-                        st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:center; margin-top:6px;'><b>{m.get('title')[:18]}</b> <span class='card-rating-tag'>⭐ {round(m.get('rating', 0), 1)}</span></div>", unsafe_allow_html=True)
+                        st.markdown(f'<h3 class="card-title">{m.get("title")}</h3>', unsafe_allow_html=True)
                         
                         fc1, fc2, fc3 = st.columns([1, 1, 1])
                         with fc1:
@@ -708,5 +942,6 @@ elif st.session_state.current_page == "🤍 Favorites":
                                 toggle_watchlist(m)
                                 st.toast(f"Removed '{m.get('title')}' from watchlist")
                                 st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
-st.markdown('<div style="text-align:center; padding:15px; color:#52525b; font-size:11px;">CINEMATCH • Data by TMDB • Designed by Usman</div>', unsafe_allow_html=True)
+st.markdown('<div style="text-align:center; padding:15px; color:#5d6578; font-size:11px;">CINEMATCH • Data by TMDB • Designed by Usman</div>', unsafe_allow_html=True)
