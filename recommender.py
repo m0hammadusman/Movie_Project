@@ -78,10 +78,11 @@ def toggle_watchlist(movie_dict):
 # =========================================================
 # ⚙️ 1. CONFIGURATION
 # =========================================================
-TMDB_API_KEY = "1d3e98627e79321f7093a1b46fe360d7"
+TMDB_API_KEY = os.getenv("TMDB_API_KEY", "1d3e98627e79321f7093a1b46fe360d7")
 DATA_DIR = "data"
 MOVIES_PICKLE = "movies.pkl"
 SIMILARITY_PICKLE = "similarity.pkl"
+
 
 st.set_page_config(
     page_title="CineMatch Pro", 
