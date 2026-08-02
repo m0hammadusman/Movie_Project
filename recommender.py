@@ -257,6 +257,11 @@ def fetch_details(movie_id):
     if not d: return {}
     
     trailer = next((f"https://youtube.com/watch?v={v['key']}" for v in d.get('videos', {}).get('results', []) if v['type'] == "Trailer"), None)
+    if not trailer:
+        trailer = next((f"https://youtube.com/watch?v={v['key']}" for v in d.get('videos', {}).get('results', [])), None)
+        
+    cast_list = [c['name'] for c in d.get('credits', {}).get('cast', [])[:5]]
+    director = next((c['name'] for c in d.get('credits', {}).get('crew', []) if c.get('job') == 'Director'), 'N/A')
     
     return {
         "title": d.get('title'),
@@ -264,11 +269,63 @@ def fetch_details(movie_id):
         "backdrop": TMDB_BACKDROP + d.get('backdrop_path') if d.get('backdrop_path') else None,
         "overview": d.get('overview', ''),
         "rating": d.get('vote_average', 0),
-        "year": d.get('release_date', 'N/A')[:4],
-        "genres": [g['name'] for g in d.get('genres', [])][:3],
+        "year": d.get('release_date', 'N/A')[:4] if d.get('release_date') else "N/A",
+        "genres": [g['name'] for g in d.get('genres', [])][:4],
         "trailer": trailer,
-        "id": d.get('id')
+        "id": d.get('id'),
+        "tagline": d.get('tagline', ''),
+        "runtime": f"{d.get('runtime')} mins" if d.get('runtime') else "N/A",
+        "cast": cast_list,
+        "director": director,
+        "vote_count": d.get('vote_count', 0)
     }
+
+def render_movie_modal(movie):
+    if not movie:
+        return
+        
+    st.markdown("---")
+    with st.container():
+        m_col1, m_col2 = st.columns([1, 1.5], gap="large")
+        with m_col1:
+            if movie.get('poster'):
+                st.image(movie['poster'], use_container_width=True)
+            elif movie.get('backdrop'):
+                st.image(movie['backdrop'], use_container_width=True)
+        with m_col2:
+            st.markdown(f"## 🎬 {movie.get('title')}")
+            if movie.get('tagline'):
+                st.markdown(f"*\"{movie['tagline']}\"*")
+            
+            st.markdown(f"**Year:** {movie.get('year')}  |  **Rating:** ⭐ **{round(movie.get('rating', 0), 1)}/10** ({movie.get('vote_count', 0):,} votes)  |  **Runtime:** ⏱️ {movie.get('runtime', 'N/A')}")
+            st.markdown(f"**Director:** 🎥 {movie.get('director', 'N/A')}")
+            if movie.get('genres'):
+                st.markdown(f"**Genres:** {', '.join(movie['genres'])}")
+            if movie.get('cast'):
+                st.markdown(f"**Starring:** {', '.join(movie['cast'])}")
+                
+            st.markdown("### 📝 Synopsis")
+            st.markdown(movie.get('overview', 'No overview available.'))
+            
+            btn_c1, btn_c2 = st.columns([1, 1])
+            with btn_c1:
+                is_fav = is_in_watchlist(movie.get('id'), movie.get('title'))
+                btn_label = "❤️ In Watchlist" if is_fav else "+ Add to Watchlist"
+                if st.button(btn_label, key=f"modal_fav_{movie.get('id') or movie.get('title')}"):
+                    added = toggle_watchlist(movie)
+                    st.toast("Added to Watchlist!" if added else "Removed from Watchlist")
+                    st.rerun()
+            with btn_c2:
+                if st.button("❌ Close Details", key="close_modal_btn"):
+                    del st.session_state["active_movie_modal"]
+                    st.rerun()
+                    
+        # Embedded Video Player if trailer exists
+        if movie.get('trailer'):
+            st.markdown("### 🍿 Official Trailer")
+            st.video(movie['trailer'])
+    st.markdown("---")
+
 
 def fetch_trending():
     res = tmdb_get("/trending/movie/week")
@@ -299,6 +356,23 @@ with st.sidebar:
     
     st.markdown("---")
     st.caption("Data provided by TMDB")
+
+# --- ACTIVE MOVIE DETAIL MODAL HANDLER ---
+if "active_movie_modal" in st.session_state and st.session_state.active_movie_modal:
+    modal_target = st.session_state.active_movie_modal
+    modal_details = None
+    if isinstance(modal_target, int) or (isinstance(modal_target, str) and modal_target.isdigit()):
+        modal_details = fetch_details(int(modal_target))
+    elif isinstance(modal_target, dict):
+        modal_details = fetch_details(modal_target.get('id')) if modal_target.get('id') else modal_target
+    elif isinstance(modal_target, str):
+        t_match = movies_df[movies_df['title'] == modal_target] if not movies_df.empty else pd.DataFrame()
+        if not t_match.empty:
+            modal_details = fetch_details(t_match.iloc[0].movie_id)
+        else:
+            modal_details = {"title": modal_target}
+    if modal_details:
+        render_movie_modal(modal_details)
 
 # --- PAGE: TRENDING (HERO SECTION) ---
 if page == "🔥 Trending":
@@ -339,9 +413,9 @@ if page == "🔥 Trending":
                         st.toast("Added to Watchlist!" if added else "Removed from Watchlist")
                         st.rerun()
                 with b3:
-                    if st.button("More Info"):
-                        st.session_state.selected_movie = hero['title']
-                        st.toast(f"Selected {hero['title']}")
+                    if st.button("ℹ️ More Info", key=f"info_hero_{hero.get('id')}"):
+                        st.session_state.active_movie_modal = hero.get('id')
+                        st.rerun()
 
             with col2:
                 # The Backdrop Image with Shadow
@@ -372,12 +446,18 @@ if page == "🔥 Trending":
                             "rating": m.get("vote_average", 0),
                             "overview": m.get("overview", "")
                         }
-                        is_fav = is_in_watchlist(m.get('id'), m.get('title'))
-                        icon = "❤️ Saved" if is_fav else "+ Watchlist"
-                        if st.button(icon, key=f"fav_trend_{i}_{j}_{m.get('id')}"):
-                            added = toggle_watchlist(m_obj)
-                            st.toast(f"{'Saved' if added else 'Removed'} '{m['title']}'")
-                            st.rerun()
+                        tc1, tc2 = st.columns(2)
+                        with tc1:
+                            is_fav = is_in_watchlist(m.get('id'), m.get('title'))
+                            icon = "❤️ Saved" if is_fav else "+ Save"
+                            if st.button(icon, key=f"fav_trend_{i}_{j}_{m.get('id')}"):
+                                added = toggle_watchlist(m_obj)
+                                st.toast(f"{'Saved' if added else 'Removed'} '{m['title']}'")
+                                st.rerun()
+                        with tc2:
+                            if st.button("ℹ️ Info", key=f"info_trend_{i}_{j}_{m.get('id')}"):
+                                st.session_state.active_movie_modal = m.get('id')
+                                st.rerun()
 
 # --- PAGE: RECOMMENDATIONS ---
 elif page == "🎯 Recommendations":
@@ -414,16 +494,20 @@ elif page == "🎯 Recommendations":
                                 st.image(m['poster'], use_container_width=True)
                             st.markdown(f"**{m['title']}**")
                             st.caption(f"{m['year']} • ⭐ {round(m['rating'], 1)}")
-                            rc1, rc2 = st.columns(2)
+                            rc1, rc2, rc3 = st.columns([1.1, 1, 1])
                             with rc1:
-                                if m['trailer']:
-                                    st.link_button("Trailer", m['trailer'])
+                                if m.get('trailer'):
+                                    st.link_button("▶ Trailer", m['trailer'])
                             with rc2:
                                 is_fav = is_in_watchlist(m.get('id'), m.get('title'))
                                 fav_icon = "❤️ Saved" if is_fav else "+ Save"
                                 if st.button(fav_icon, key=f"fav_rec_{i}_{j}_{m.get('id') or m.get('title')}"):
                                     added = toggle_watchlist(m)
                                     st.toast(f"{'Saved' if added else 'Removed'} '{m['title']}'")
+                                    st.rerun()
+                            with rc3:
+                                if st.button("ℹ️ Info", key=f"info_rec_{i}_{j}_{m.get('id') or m.get('title')}"):
+                                    st.session_state.active_movie_modal = m.get('id') or m.get('title')
                                     st.rerun()
         else:
             st.warning("No matches found in database.")
@@ -451,7 +535,7 @@ elif page == "⭐ Favorites":
                         st.markdown(f"**{m.get('title')}**")
                         st.caption(f"{m.get('year', 'N/A')} • ⭐ {round(m.get('rating', 0), 1)}")
                         
-                        fc1, fc2 = st.columns(2)
+                        fc1, fc2, fc3 = st.columns([1, 1, 1])
                         with fc1:
                             if st.button("🎯 Recs", key=f"rec_fav_{i}_{j}_{m.get('id') or m.get('title')}"):
                                 st.session_state.fav_selected_movie = m.get('title')
@@ -459,10 +543,15 @@ elif page == "⭐ Favorites":
                                 st.toast(f"Finding recommendations for '{m.get('title')}'...")
                                 st.rerun()
                         with fc2:
-                            if st.button("🗑️ Remove", key=f"del_fav_{i}_{j}_{m.get('id') or m.get('title')}"):
+                            if st.button("ℹ️ Info", key=f"info_fav_{i}_{j}_{m.get('id') or m.get('title')}"):
+                                st.session_state.active_movie_modal = m.get('id') or m.get('title')
+                                st.rerun()
+                        with fc3:
+                            if st.button("🗑️", key=f"del_fav_{i}_{j}_{m.get('id') or m.get('title')}"):
                                 toggle_watchlist(m)
                                 st.toast(f"Removed '{m.get('title')}' from watchlist")
                                 st.rerun()
 
 # --- FOOTER ---
-st.markdown('<div class="footer">Designed by <b>Usman</b> • Powered by TMDB API</div>', unsafe_allow_html=True)
+st.markdown('<div class="footer">Designed by <b>Usman</b> • Powered by TMDB API</div>', unsafe_allow_html=True)
+
