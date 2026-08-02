@@ -5,7 +5,7 @@ import requests
 import os
 import pickle
 import json
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 USER_DATA_FILE = "user_data.json"
@@ -223,17 +223,18 @@ def load_data():
     credits = pd.read_csv(os.path.join(DATA_DIR, "tmdb_5000_credits.csv"))
     movies = movies.merge(credits, on='title', how='left')
     
-    # Simple preprocessing
+    # Enhanced TF-IDF preprocessing fallback
     movies['tags'] = movies['overview'].fillna('') + " " + movies['genres'].fillna('')
     movies['tags'] = movies['tags'].apply(lambda x: x.lower())
     
     new_df = movies[['movie_id', 'title', 'tags']].copy()
     
-    cv = CountVectorizer(max_features=5000, stop_words='english')
-    vectors = cv.fit_transform(new_df['tags']).toarray()
+    tfidf = TfidfVectorizer(max_features=10000, stop_words='english', ngram_range=(1, 2))
+    vectors = tfidf.fit_transform(new_df['tags'])
     similarity = cosine_similarity(vectors)
 
     return new_df, similarity
+
 
 movies_df, similarity = load_data()
 title_to_index = {title: idx for idx, title in enumerate(movies_df['title'].values)} if not movies_df.empty else {}
